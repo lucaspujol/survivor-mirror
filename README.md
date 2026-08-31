@@ -23,7 +23,7 @@ docker compose up          # démarrer
 docker compose up -d       # démarrer en arrière-plan
 docker compose down        # arrêter
 docker compose logs -f     # logs (ajouter api | web | db pour un service)
-docker compose up --build  # après ajout d'une dépendance
+docker compose up --build -V  # après ajout d'une dépendance
 ```
 
 | Service | URL |
@@ -34,6 +34,10 @@ docker compose up --build  # après ajout d'une dépendance
 | PostgreSQL | localhost:5433 |
 
 Hot reload actif des deux côtés, aucun rebuild nécessaire pour modifier le code.
+
+`-V` (`--renew-anon-volumes`) est indispensable après l'ajout d'une dépendance
+frontend : sans lui, le volume anonyme conserve l'ancien `node_modules` et Vite
+ne trouve pas les nouveaux paquets. La base (volume nommé) n'est pas affectée.
 
 ## Support de l'éditeur
 
