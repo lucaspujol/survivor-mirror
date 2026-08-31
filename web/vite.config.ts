@@ -1,13 +1,19 @@
+import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
+import path from 'node:path'
 import { defineConfig } from 'vite'
 
-// https://vite.dev/config/
+// https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      '@': path.resolve(import.meta.dirname, './src'),
+    },
+  },
   server: {
     host: true,
     port: 5173,
-    // bind mounts don't emit inotify events reliably, so HMR needs polling
     watch: { usePolling: true },
     proxy: {
       '/api': process.env.API_PROXY_TARGET ?? 'http://localhost:8000',

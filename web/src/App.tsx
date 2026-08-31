@@ -1,24 +1,16 @@
-import { useEffect, useState } from 'react'
-import './App.css'
-
-type ApiStatus = 'loading' | 'ok' | 'unreachable'
+import { Route, Routes } from 'react-router'
+import { Layout } from '@/components/layout/Layout'
+import { HomePage } from '@/pages/HomePage'
+import { LoginPage } from '@/pages/LoginPage'
 
 function App() {
-  const [status, setStatus] = useState<ApiStatus>('loading')
-
-  useEffect(() => {
-    fetch('/api/health')
-      .then((res) => (res.ok ? setStatus('ok') : setStatus('unreachable')))
-      .catch(() => setStatus('unreachable'))
-  }, [])
-
   return (
-    <main>
-      <h1>GéoEmploi</h1>
-      <p>
-        API: <span className={`status status-${status}`}>{status}</span>
-      </p>
-    </main>
+    <Routes>
+      <Route element={<Layout />}>
+        <Route index element={<HomePage />} />
+        <Route path="login" element={<LoginPage />} />
+      </Route>
+    </Routes>
   )
 }
 
