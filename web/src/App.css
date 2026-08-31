@@ -1,0 +1,18 @@
+main {
+  max-width: 40rem;
+  margin: 4rem auto;
+  padding: 0 1rem;
+  font-family: system-ui, sans-serif;
+}
+
+.status-loading {
+  color: #888;
+}
+
+.status-ok {
+  color: #16a34a;
+}
+
+.status-unreachable {
+  color: #dc2626;
+}
