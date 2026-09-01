@@ -1,3 +1,5 @@
+import { LoginForm } from '@/components/login-form'
+
 export function LoginPage() {
-  return <h1 className="text-2xl font-semibold">Connexion</h1>
+  return <LoginForm />
 }
