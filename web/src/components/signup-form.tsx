@@ -63,6 +63,7 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
               </FieldDescription>
             </FieldGroup>
           </form>
+          {/* Image placeholder */}
           <div className="relative hidden bg-gradient-to-br from-primary/20 to-primary/60 md:block" />
         </CardContent>
       </Card>
