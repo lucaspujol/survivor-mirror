@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { useCallback, useRef, useState } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -29,68 +29,127 @@ interface JobOffer {
   lng: number;
 }
 
+interface MapBounds {
+  south: number;
+  west: number;
+  north: number;
+  east: number;
+}
+
 const DEFAULT_CENTER: [number, number] = [46.6, 2.5];
 const DEFAULT_ZOOM = 6;
+const DEBOUNCE_MS = 300;
+
+function boundsToObject(bounds: L.LatLngBounds): MapBounds {
+  return {
+    south: bounds.getSouth(),
+    west: bounds.getWest(),
+    north: bounds.getNorth(),
+    east: bounds.getEast(),
+  };
+}
+
+function BoundsWatcher({ onBoundsChange }: { onBoundsChange: (bounds: MapBounds) => void }) {
+  const map = useMapEvents({
+    moveend: () => onBoundsChange(boundsToObject(map.getBounds())),
+    zoomend: () => onBoundsChange(boundsToObject(map.getBounds())),
+  });
+
+  return null;
+}
 
 export function JobMap() {
   const [offers, setOffers] = useState<JobOffer[]>([]);
   const [loading, setLoading] = useState(true);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    fetch('/api/offres')
-      .then((res) => res.json())
-      .then((data: JobOffer[]) => setOffers(data))
-      .finally(() => setLoading(false));
+  const fetchOffersInBounds = useCallback((bounds: MapBounds) => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    debounceRef.current = setTimeout(() => {
+      const params = new URLSearchParams({
+        south: bounds.south.toString(),
+        west: bounds.west.toString(),
+        north: bounds.north.toString(),
+        east: bounds.east.toString(),
+      });
+
+      setLoading(true);
+      fetch(`/api/offres?${params}`)
+        .then((res) => res.json())
+        .then((data: JobOffer[]) => setOffers(data))
+        .finally(() => setLoading(false));
+    }, DEBOUNCE_MS);
   }, []);
 
-  if (loading) {
-    return <p>Chargement de la carte…</p>;
-  }
-
   return (
-    <MapContainer
-      center={DEFAULT_CENTER}
-      zoom={DEFAULT_ZOOM}
-      style={{ height: '600px', width: '100%' }}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+    <div style={{ position: 'relative' }}>
+      {loading && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 12,
+            right: 12,
+            zIndex: 1000,
+            background: 'white',
+            padding: '4px 10px',
+            borderRadius: 4,
+            fontSize: 13,
+            boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+          }}
+        >
+          Chargement des offres…
+        </div>
+      )}
 
-      <MarkerClusterGroup
-        chunkedLoading
-        maxClusterRadius={(zoom: number) => (zoom < 8 ? 100 : 40)}
-        iconCreateFunction={(cluster) => {
-          const count = cluster.getChildCount();
-          return L.divIcon({
-            html: `<div style="
-              background: #1B3A6B;
-              color: white;
-              border-radius: 50%;
-              width: 36px;
-              height: 36px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-weight: 600;
-              border: 2px solid white;
-            ">${count}</div>`,
-            className: '',
-            iconSize: L.point(36, 36),
-          });
-        }}
+      <MapContainer
+        center={DEFAULT_CENTER}
+        zoom={DEFAULT_ZOOM}
+        style={{ height: '600px', width: '100%' }}
       >
-        {offers.map((offer) => (
-          <Marker key={offer.id} position={[offer.lat, offer.lng]} icon={jobIcon}>
-            <Popup>
-              <strong>{offer.title}</strong>
-              <br />
-              {offer.company}
-            </Popup>
-          </Marker>
-        ))}
-      </MarkerClusterGroup>
-    </MapContainer>
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+
+        <BoundsWatcher onBoundsChange={fetchOffersInBounds} />
+
+        <MarkerClusterGroup
+          chunkedLoading
+          maxClusterRadius={(zoom: number) => (zoom < 8 ? 100 : 40)}
+          iconCreateFunction={(cluster) => {
+            const count = cluster.getChildCount();
+            return L.divIcon({
+              html: `<div style="
+                background: #1B3A6B;
+                color: white;
+                border-radius: 50%;
+                width: 36px;
+                height: 36px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: 600;
+                border: 2px solid white;
+              ">${count}</div>`,
+              className: '',
+              iconSize: L.point(36, 36),
+            });
+          }}
+        >
+          {offers.map((offer) => (
+            <Marker key={offer.id} position={[offer.lat, offer.lng]} icon={jobIcon}>
+              <Popup>
+                <strong>{offer.title}</strong>
+                <br />
+                {offer.company}
+              </Popup>
+            </Marker>
+          ))}
+        </MarkerClusterGroup>
+      </MapContainer> 
+    </div>
   );
 }
