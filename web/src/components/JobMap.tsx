@@ -14,6 +14,13 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
+const jobIcon = new L.Icon({
+  iconUrl: '/icons/job-marker.svg',
+  iconSize: [32, 40],
+  iconAnchor: [16, 40],
+  popupAnchor: [0, -40],
+});
+
 interface JobOffer {
   id: number;
   title: string;
@@ -53,10 +60,29 @@ export function JobMap() {
 
       <MarkerClusterGroup
         chunkedLoading
-        maxClusterRadius={(zoom: number) => (zoom < 8 ? 60 : 40)}
+        maxClusterRadius={(zoom: number) => (zoom < 8 ? 100 : 40)}
+        iconCreateFunction={(cluster) => {
+          const count = cluster.getChildCount();
+          return L.divIcon({
+            html: `<div style="
+              background: #1B3A6B;
+              color: white;
+              border-radius: 50%;
+              width: 36px;
+              height: 36px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-weight: 600;
+              border: 2px solid white;
+            ">${count}</div>`,
+            className: '',
+            iconSize: L.point(36, 36),
+          });
+        }}
       >
         {offers.map((offer) => (
-          <Marker key={offer.id} position={[offer.lat, offer.lng]}>
+          <Marker key={offer.id} position={[offer.lat, offer.lng]} icon={jobIcon}>
             <Popup>
               <strong>{offer.title}</strong>
               <br />
