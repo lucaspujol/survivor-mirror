@@ -38,7 +38,7 @@ interface MapBounds {
 
 const DEFAULT_CENTER: [number, number] = [46.6, 2.5];
 const DEFAULT_ZOOM = 6;
-const DEBOUNCE_MS = 300;
+const DEBOUNCE_MS = 100;
 
 function boundsToObject(bounds: L.LatLngBounds): MapBounds {
   return {
