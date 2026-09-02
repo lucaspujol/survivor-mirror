@@ -39,6 +39,10 @@ interface MapBounds {
 const DEFAULT_CENTER: [number, number] = [46.6, 2.5];
 const DEFAULT_ZOOM = 6;
 const DEBOUNCE_MS = 100;
+const WORLD_BOUNDS: L.LatLngBoundsExpression = [
+  [-90, -180],
+  [90, 180],
+];
 
 function boundsToObject(bounds: L.LatLngBounds): MapBounds {
   return {
@@ -107,6 +111,9 @@ export function JobMap() {
       <MapContainer
         center={DEFAULT_CENTER}
         zoom={DEFAULT_ZOOM}
+        minZoom={2}
+        maxBounds={WORLD_BOUNDS}
+        maxBoundsViscosity={1.0}
         style={{ height: '600px', width: '100%' }}
       >
         <TileLayer
