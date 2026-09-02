@@ -1,4 +1,4 @@
-"""GéoEmploi data model.
+"""ChômageGo data model.
 
 Minimisation principles applied here:
 - no personal data beyond what a job search requires (no date of birth, no home

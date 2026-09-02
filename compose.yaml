@@ -12,7 +12,7 @@ services:
     healthcheck:
       # -h: without a host, pg_isready answers OK as soon as the temporary
       # initdb server is up, well before Postgres accepts TCP connections.
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER:-geoemploi} -d ${POSTGRES_DB:-geoemploi}"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER:-chomagego} -d ${POSTGRES_DB:-chomagego}"]
       interval: 5s
       timeout: 5s
       retries: 10
