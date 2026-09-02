@@ -2,9 +2,9 @@ services:
   db:
     image: postgis/postgis:16-3.4-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-geoemploi}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-geoemploi}
-      POSTGRES_DB: ${POSTGRES_DB:-geoemploi}
+      POSTGRES_USER: ${POSTGRES_USER:-chomagego}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chomagego}
+      POSTGRES_DB: ${POSTGRES_DB:-chomagego}
     ports:
       - "${POSTGRES_HOST_PORT:-5433}:5432"
     volumes:
@@ -12,7 +12,7 @@ services:
     healthcheck:
       # -h: without a host, pg_isready answers OK as soon as the temporary
       # initdb server is up, well before Postgres accepts TCP connections.
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER:-geoemploi} -d ${POSTGRES_DB:-geoemploi}"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER:-chomagego} -d ${POSTGRES_DB:-chomagego}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -22,7 +22,7 @@ services:
     build: ./api
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-geoemploi}:${POSTGRES_PASSWORD:-geoemploi}@db:5432/${POSTGRES_DB:-geoemploi}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-chomagego}:${POSTGRES_PASSWORD:-chomagego}@db:5432/${POSTGRES_DB:-chomagego}
     volumes:
       - ./api:/app
     ports:
