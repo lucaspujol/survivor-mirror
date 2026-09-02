@@ -80,13 +80,13 @@ jobs:
 
       - name: Only the expected objects are created
         run: |
-          tables=$(docker compose exec -T db psql -U geoemploi -d geoemploi -tAc \
+          tables=$(docker compose exec -T db psql -U chomagego -d chomagego -tAc \
             "SELECT string_agg(tablename, ',' ORDER BY tablename) FROM pg_tables WHERE schemaname = 'public';")
           echo "public tables: $tables"
           expected="alembic_version,applications,employers,job_seekers,jobs,spatial_ref_sys,users"
           [ "$tables" = "$expected" ] || { echo "expected: $expected" >&2; exit 1; }
 
-          extensions=$(docker compose exec -T db psql -U geoemploi -d geoemploi -tAc \
+          extensions=$(docker compose exec -T db psql -U chomagego -d chomagego -tAc \
             "SELECT string_agg(extname, ',' ORDER BY extname) FROM pg_extension;")
           echo "extensions: $extensions"
           [ "$extensions" = "plpgsql,postgis" ] || { echo "expected: plpgsql,postgis" >&2; exit 1; }

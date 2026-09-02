@@ -1,4 +1,4 @@
-# GéoEmploi
+# ChômageGo
 
 Interactive map of geolocated job offers.
 

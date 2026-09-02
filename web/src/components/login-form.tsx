@@ -20,7 +20,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
               <div className="flex flex-col items-center gap-2 text-center">
                 <h1 className="text-2xl font-bold">Content de vous revoir</h1>
                 <p className="text-balance text-muted-foreground">
-                  Connectez-vous à votre compte GéoEmploi
+                  Connectez-vous à votre compte ChômageGo
                 </p>
               </div>
               <Field>
