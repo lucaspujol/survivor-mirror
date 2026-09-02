@@ -18,6 +18,9 @@ export function CreateOfferForm({ onCreated }: CreateOfferFormProps) {
     setStatus('loading');
     setErrorMessage('');
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15_000);
+
     try {
       const response = await fetch('/api/offres', {
         method: 'POST',
@@ -38,7 +41,15 @@ export function CreateOfferForm({ onCreated }: CreateOfferFormProps) {
       onCreated?.();
     } catch (err) {
       setStatus('error');
-      setErrorMessage(err instanceof Error ? err.message : 'Erreur inconnue.');
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setErrorMessage(
+          'Le serveur ne répond pas (délai dépassé). Vérifiez que le backend tourne bien.'
+        );
+      } else {
+        setErrorMessage(err instanceof Error ? err.message : 'Erreur inconnue.');
+      }
+    } finally {
+      clearTimeout(timeoutId);
     }
   };
 
