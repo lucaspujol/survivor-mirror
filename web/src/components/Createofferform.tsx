@@ -8,6 +8,7 @@ interface CreateOfferFormProps {
 export function CreateOfferForm({ onCreated }: CreateOfferFormProps) {
   const [title, setTitle] = useState('');
   const [company, setCompany] = useState('');
+  const [description, setDescription] = useState('');
   const [address, setAddress] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
@@ -21,7 +22,7 @@ export function CreateOfferForm({ onCreated }: CreateOfferFormProps) {
       const response = await fetch('/api/offres', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, company, address }),
+        body: JSON.stringify({ title, company, description, address }),
       });
 
       if (!response.ok) {
@@ -31,6 +32,7 @@ export function CreateOfferForm({ onCreated }: CreateOfferFormProps) {
 
       setTitle('');
       setCompany('');
+      setDescription('');
       setAddress('');
       setStatus('idle');
       onCreated?.();
@@ -64,6 +66,20 @@ export function CreateOfferForm({ onCreated }: CreateOfferFormProps) {
           value={company}
           onChange={(e) => setCompany(e.target.value)}
           required
+          className="rounded-md border px-3 py-2 text-sm"
+        />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="description" className="text-sm font-medium">
+          Description du poste
+        </label>
+        <textarea
+          id="description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          required
+          rows={3}
           className="rounded-md border px-3 py-2 text-sm"
         />
       </div>
