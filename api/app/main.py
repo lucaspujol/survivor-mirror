@@ -1,12 +1,12 @@
 import httpx
 from datetime import date
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from pyproj import Transformer
 
 app = FastAPI(
-    title="GéoEmploi API",
+    title="ChômageGo API",
     version="0.1.0",
     docs_url="/api/docs",
     openapi_url="/api/openapi.json",
@@ -133,3 +133,28 @@ def list_offers_admin() -> list[AdminJobOffer]:
         x, y = to_lambert93(offer.lat, offer.lng)
         result.append(AdminJobOffer(**offer.model_dump(), lambert93_x=x, lambert93_y=y))
     return result
+
+class OfferCreate(BaseModel):
+    title: str
+    company: str
+    address: str
+
+@app.post("/api/offres", response_model=JobOffer, status_code=201)
+def create_offer(payload: OfferCreate) -> JobOffer:
+    try:
+        geo = geocode_address(payload.address)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    new_offer = JobOffer(
+        id=max((offer.id for offer in MOCK_OFFERS), default=0) + 1,
+        title=payload.title,
+        company=payload.company,
+        lat=geo.lat,
+        lng=geo.lng,
+        geocoding_source=geo.source,
+        geocoding_score=geo.score,
+        geocoding_date=geo.obtained_at,
+    )
+    MOCK_OFFERS.append(new_offer)
+    return new_offer

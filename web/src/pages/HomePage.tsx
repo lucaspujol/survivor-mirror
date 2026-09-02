@@ -1,4 +1,5 @@
 import { JobMap } from '@/components/JobMap';
+import { CreateOfferForm } from '@/components/Createofferform';
 
 export function HomePage() {
   return (
@@ -10,6 +11,7 @@ export function HomePage() {
 
       <div className="mt-6">
         <JobMap />
+        <CreateOfferForm />
       </div>
     </div>
   )
