@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Frontend — lint & build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Same major as web/Dockerfile.
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm run build
+
+  stack:
+    name: Stack — compose, migrations & schema
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start the stack
+        run: |
+          cp .env.example .env
+          docker compose up -d --build
+
+      - name: Wait for the API
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:8000/api/health; then
+              echo && exit 0
+            fi
+            sleep 2
+          done
+          echo "API did not become ready in time" >&2
+          exit 1
+
+      - name: Models match the deployed schema
+        run: docker compose exec -T api alembic check
+
+      - name: Migrations replay on an existing database
+        run: |
+          docker compose exec -T api alembic downgrade base
+          docker compose exec -T api alembic upgrade head
+          # Re-running head must be a no-op.
+          docker compose exec -T api alembic upgrade head
+          docker compose exec -T api alembic check
+
+      - name: Migrations apply to an empty database
+        run: |
+          docker compose down -v
+          docker compose up -d
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:8000/api/health > /dev/null && break
+            sleep 2
+          done
+          docker compose exec -T api alembic check
+
+      - name: Only the expected objects are created
+        run: |
+          tables=$(docker compose exec -T db psql -U geoemploi -d geoemploi -tAc \
+            "SELECT string_agg(tablename, ',' ORDER BY tablename) FROM pg_tables WHERE schemaname = 'public';")
+          echo "public tables: $tables"
+          expected="alembic_version,applications,employers,job_seekers,jobs,spatial_ref_sys,users"
+          [ "$tables" = "$expected" ] || { echo "expected: $expected" >&2; exit 1; }
+
+          extensions=$(docker compose exec -T db psql -U geoemploi -d geoemploi -tAc \
+            "SELECT string_agg(extname, ',' ORDER BY extname) FROM pg_extension;")
+          echo "extensions: $extensions"
+          [ "$extensions" = "plpgsql,postgis" ] || { echo "expected: plpgsql,postgis" >&2; exit 1; }
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

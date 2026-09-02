@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: postgis/postgis:16-3.4-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-chomagego}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chomagego}
@@ -10,14 +10,17 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chomagego}"]
+      # -h: without a host, pg_isready answers OK as soon as the temporary
+      # initdb server is up, well before Postgres accepts TCP connections.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER:-geoemploi} -d ${POSTGRES_DB:-geoemploi}"]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 30s
 
   api:
     build: ./api
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-chomagego}:${POSTGRES_PASSWORD:-chomagego}@db:5432/${POSTGRES_DB:-chomagego}
     volumes:

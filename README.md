@@ -1,29 +1,29 @@
 # ChômageGo
 
-Carte interactive d'offres d'emploi géolocalisées.
+Interactive map of geolocated job offers.
 
-React + TypeScript + Vite · FastAPI (Python 3.12) · PostgreSQL 16
+React + TypeScript + Vite · FastAPI (Python 3.12) · PostgreSQL 16 + PostGIS
 
-## Prérequis
+## Requirements
 
-Docker avec le plugin Compose v2 (`docker compose version`).
-Ubuntu : `sudo apt install -y docker-compose-v2`
+Docker with the Compose v2 plugin (`docker compose version`).
+Ubuntu: `sudo apt install -y docker-compose-v2`
 
-## Installation
+## Setup
 
 ```sh
 cp .env.example .env
 docker compose up --build
 ```
 
-## Utilisation
+## Usage
 
 ```sh
-docker compose up          # démarrer
-docker compose up -d       # démarrer en arrière-plan
-docker compose down        # arrêter
-docker compose logs -f     # logs (ajouter api | web | db pour un service)
-docker compose up --build -V  # après ajout d'une dépendance
+docker compose up          # start
+docker compose up -d       # start in the background
+docker compose down        # stop
+docker compose logs -f     # logs (add api | web | db for a single service)
+docker compose up --build -V  # after adding a dependency
 ```
 
 | Service | URL |
@@ -33,21 +33,23 @@ docker compose up --build -V  # après ajout d'une dépendance
 | Swagger | http://localhost:8000/api/docs |
 | PostgreSQL | localhost:5433 |
 
-Hot reload actif des deux côtés, aucun rebuild nécessaire pour modifier le code.
+Alembic migrations are applied automatically when the API starts. The schema
+and the migration commands are documented in [docs/database.md](docs/database.md).
 
-`-V` (`--renew-anon-volumes`) est indispensable après l'ajout d'une dépendance
-frontend : sans lui, le volume anonyme conserve l'ancien `node_modules` et Vite
-ne trouve pas les nouveaux paquets. La base (volume nommé) n'est pas affectée.
+Hot reload is active on both sides; no rebuild is needed to change code.
 
-## Support de l'éditeur
+`-V` (`--renew-anon-volumes`) is required after adding a frontend dependency:
+without it the anonymous volume keeps the old `node_modules` and Vite cannot
+find the new packages. The database (a named volume) is unaffected.
 
-Les dépendances vivent dans les conteneurs : sans installation locale,
-l'éditeur signale des imports introuvables. Pour l'autocomplétion et le
-typage :
+## Editor support
+
+Dependencies live inside the containers, so without a local install your editor
+reports unresolved imports. For autocompletion and type checking:
 
 ```sh
 cd web && npm install
 cd api && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ```
 
-Sans effet sur les conteneurs, qui gardent leurs propres dépendances.
+This has no effect on the containers, which keep their own dependencies.
