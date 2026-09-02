@@ -120,7 +120,7 @@ export function JobMap() {
         <MarkerClusterGroup
           chunkedLoading
           maxClusterRadius={(zoom: number) => (zoom < 8 ? 100 : 40)}
-          iconCreateFunction={(cluster) => {
+          iconCreateFunction={(cluster: L.MarkerCluster) => {
             const count = cluster.getChildCount();
             return L.divIcon({
               html: `<div style="
