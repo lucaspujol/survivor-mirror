@@ -40,7 +40,7 @@ def run_migrations_online() -> None:
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
-        # GéoEmploi objects live in `public`: ignore any extra schema the
+        # ChômageGo objects live in `public`: ignore any extra schema the
         # PostgreSQL image may have added to the search_path. The search_path is
         # set on the connection rather than with a SET statement, which would
         # open a transaction before Alembic and leave its work uncommitted.

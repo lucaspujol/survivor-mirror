@@ -17,7 +17,7 @@ PostgreSQL 16 + PostGIS 3.4, Alembic migrations, SQLAlchemy 2.0 models.
 
 ```sh
 docker compose up --build                               # database + migrations + API + frontend
-docker compose exec db psql -U geoemploi -d geoemploi   # psql shell
+docker compose exec db psql -U chomagego -d chomagego   # psql shell
 ```
 
 `DATABASE_URL` is injected by Compose. Outside the containers, the default in
@@ -162,5 +162,5 @@ An offer can be geocoded again at any time: update `location`,
 
 The `postgis/postgis` image also installs the TIGER geocoder (US address data,
 about 40 tables), topology and `fuzzystrmatch`, and adds those schemas to the
-database `search_path`. GéoEmploi needs none of them, so the initial migration
+database `search_path`. ChômageGo needs none of them, so the initial migration
 drops them and resets `search_path`. Only the `postgis` extension is kept.

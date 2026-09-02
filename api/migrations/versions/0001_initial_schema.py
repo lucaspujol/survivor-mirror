@@ -1,4 +1,4 @@
-"""Initial GéoEmploi schema
+"""Initial ChômageGo schema
 
 Revision ID: 0001_initial_schema
 Revises:
@@ -20,7 +20,7 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     # The postgis/postgis image also installs the TIGER geocoder (US address
-    # data, ~40 tables) and topology, neither of which GéoEmploi uses. Keep only
+    # data, ~40 tables) and topology, neither of which ChômageGo uses. Keep only
     # `postgis` and restore a standard search_path.
     op.execute("DROP EXTENSION IF EXISTS postgis_tiger_geocoder CASCADE")
     op.execute("DROP EXTENSION IF EXISTS fuzzystrmatch CASCADE")
