@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
@@ -53,19 +53,41 @@ function boundsToObject(bounds: L.LatLngBounds): MapBounds {
   };
 }
 
-function BoundsWatcher({ onBoundsChange }: { onBoundsChange: (bounds: MapBounds) => void }) {
+function BoundsWatcher({
+  onBoundsChange,
+  onMapReady,
+}: {
+  onBoundsChange: (bounds: MapBounds) => void;
+  onMapReady: (map: L.Map) => void;
+}) {
   const map = useMapEvents({
     moveend: () => onBoundsChange(boundsToObject(map.getBounds())),
     zoomend: () => onBoundsChange(boundsToObject(map.getBounds())),
   });
 
+  const hasFetchedInitial = useRef(false);
+
+  useEffect(() => {
+    onMapReady(map);
+
+    if (!hasFetchedInitial.current) {
+      hasFetchedInitial.current = true;
+      onBoundsChange(boundsToObject(map.getBounds()));
+    }
+  }, [map, onMapReady, onBoundsChange]);
+
   return null;
 }
 
-export function JobMap() {
+interface JobMapProps {
+  refreshSignal?: number;
+}
+
+export function JobMap({ refreshSignal }: JobMapProps) {
   const [offers, setOffers] = useState<JobOffer[]>([]);
   const [loading, setLoading] = useState(true);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
 
   const fetchOffersInBounds = useCallback((bounds: MapBounds) => {
     if (debounceRef.current) {
@@ -87,6 +109,21 @@ export function JobMap() {
         .finally(() => setLoading(false));
     }, DEBOUNCE_MS);
   }, []);
+
+  const handleMapReady = useCallback ((map: L.Map) => {
+    mapInstanceRef.current = map;
+  }, []);
+
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (mapInstanceRef.current) {
+      fetchOffersInBounds(boundsToObject(mapInstanceRef.current.getBounds()));
+    }
+  }, [refreshSignal, fetchOffersInBounds]);
 
   return (
     <div style={{ position: 'relative' }}>
@@ -113,7 +150,7 @@ export function JobMap() {
         zoom={DEFAULT_ZOOM}
         minZoom={2}
         maxBounds={WORLD_BOUNDS}
-        maxBoundsViscosity={1.0}
+        maxBoundsViscosity={0.8}
         style={{ height: '600px', width: '100%' }}
       >
         <TileLayer
@@ -122,7 +159,7 @@ export function JobMap() {
           maxZoom={19}
         />
 
-        <BoundsWatcher onBoundsChange={fetchOffersInBounds} />
+        <BoundsWatcher onBoundsChange={fetchOffersInBounds} onMapReady={handleMapReady} />
 
         <MarkerClusterGroup
           chunkedLoading
