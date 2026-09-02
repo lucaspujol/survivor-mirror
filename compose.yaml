@@ -2,15 +2,15 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-geoemploi}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-geoemploi}
-      POSTGRES_DB: ${POSTGRES_DB:-geoemploi}
+      POSTGRES_USER: ${POSTGRES_USER:-chomagego}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chomagego}
+      POSTGRES_DB: ${POSTGRES_DB:-chomagego}
     ports:
       - "${POSTGRES_HOST_PORT:-5433}:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-geoemploi}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-chomagego}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -19,7 +19,7 @@ services:
     build: ./api
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-geoemploi}:${POSTGRES_PASSWORD:-geoemploi}@db:5432/${POSTGRES_DB:-geoemploi}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-chomagego}:${POSTGRES_PASSWORD:-chomagego}@db:5432/${POSTGRES_DB:-chomagego}
     volumes:
       - ./api:/app
     ports:

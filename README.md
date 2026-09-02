@@ -1,4 +1,4 @@
-# GéoEmploi
+# ChômageGo
 
 Carte interactive d'offres d'emploi géolocalisées.
 
