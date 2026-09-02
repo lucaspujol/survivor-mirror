@@ -1,0 +1,108 @@
+// GéoEmploi logical model — https://dbdiagram.io (import: DBML)
+// Source of truth: api/app/models.py + api/migrations/versions/
+
+Project geoemploi {
+  database_type: 'PostgreSQL'
+  Note: '''
+    Search for geolocated job offers.
+    PostGIS is required (postgis extension) for the jobs.location column.
+
+    Data minimisation:
+    - no user GPS position is stored;
+    - no personal data beyond what the service needs;
+    - Lambert-93 coordinates (EPSG:2154) are computed on demand
+      (ST_Transform), never stored.
+  '''
+}
+
+Table users {
+  id bigserial [pk]
+  email text [not null, unique, note: 'login identifier']
+  password_hash text [not null, note: 'hash only, never the password']
+  role user_role [not null]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+}
+
+Table job_seekers {
+  user_id bigint [pk, ref: - users.id, note: 'ON DELETE CASCADE']
+  first_name text [not null]
+  last_name text [not null]
+  skills "text[]" [not null, default: `'{}'`, note: 'declared skills']
+  experience text [null, note: 'work experience (free text)']
+  availability date [null, note: 'available from']
+}
+
+Table employers {
+  user_id bigint [pk, ref: - users.id, note: 'ON DELETE CASCADE']
+  company_name text [not null]
+  activity_verified boolean [not null, default: false]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+}
+
+Table jobs {
+  id bigserial [pk]
+  employer_id bigint [not null, note: 'ON DELETE CASCADE']
+  title text [not null]
+  description text [not null]
+  location_address text [null, note: 'address entered, sent to the Adresse API']
+  location_city text [not null, note: 'municipality of the offer']
+  location "geometry(Point,4326)" [null, note: 'WGS84 point; lat/lng = ST_Y/ST_X']
+  geocoding_source text [null, note: 'e.g. api-adresse.data.gouv.fr']
+  geocoding_score double [null, note: 'between 0 and 1']
+  geocoded_at timestamptz [null, note: 'when the geocoding was obtained']
+  location_status location_status [not null, default: 'pending']
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    employer_id [name: 'ix_jobs_employer_id']
+    location [name: 'ix_jobs_location', type: gist]
+  }
+
+  Note: '''
+    ck_jobs_geocoding_score_range: score between 0 and 1.
+    ck_jobs_geocoded_requires_location: location_status = 'geocoded' requires
+    location, geocoding_source, geocoding_score and geocoded_at to be set.
+  '''
+}
+
+Table applications {
+  id bigserial [pk]
+  job_id bigint [not null, note: 'ON DELETE CASCADE']
+  job_seeker_id bigint [not null, note: 'ON DELETE CASCADE']
+  status application_status [not null, default: 'sent']
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (job_id, job_seeker_id) [unique, name: 'uq_applications_job_seeker']
+    job_seeker_id [name: 'ix_applications_job_seeker_id']
+  }
+}
+
+// Cardinalities
+Ref: jobs.employer_id > employers.user_id              // 1 employer — N offers
+Ref: applications.job_id > jobs.id                     // 1 offer — N applications
+Ref: applications.job_seeker_id > job_seekers.user_id  // 1 job seeker — N applications
+
+// Controlled values (CHECK constraints in the database, no native ENUM type)
+Enum user_role {
+  seeker
+  employer
+  admin
+}
+
+Enum application_status {
+  sent
+  under_review
+  accepted
+  rejected
+}
+
+Enum location_status {
+  pending   [note: 'not geocoded yet']
+  geocoded  [note: 'reliable location']
+  to_verify [note: 'location needs checking']
+}
