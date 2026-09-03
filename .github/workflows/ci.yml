@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   web:
-    name: Frontend — lint & build
+    name: Frontend - lint & build
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
@@ -35,7 +35,7 @@ jobs:
       - run: npm run build
 
   stack:
-    name: Stack — compose, migrations & schema
+    name: Stack - compose, migrations & schema
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
