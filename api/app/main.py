@@ -1,9 +1,17 @@
 import httpx
-from datetime import date
-from fastapi import FastAPI
+from typing import cast
+from datetime import date, datetime, timezone
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from geoalchemy2.functions import ST_MakeEnvelope
+from geoalchemy2.shape import from_shape, to_shape
 from pydantic import BaseModel
 from pyproj import Transformer
+from shapely.geometry import Point
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session, joinedload
+from app.db import get_session
+from app.models import Employer, Job, User
 
 app = FastAPI(
     title="ChômageGo API",
@@ -28,6 +36,7 @@ ADRESSE_API_URL = "https://api-adresse.data.gouv.fr/search/"
 class GeocodingResult(BaseModel):
     lat: float
     lng: float
+    city: str
     source: str
     score: float
     obtained_at: date
@@ -43,11 +52,13 @@ def geocode_address(address: str) -> GeocodingResult:
 
     best = features[0]
     lng, lat = best["geometry"]["coordinates"]
-    score = best["properties"].get("score", 0.0)
+    properties = best["properties"]
+    score = properties.get("score", 0.0)
 
     return GeocodingResult(
         lat=lat,
         lng=lng,
+        city=properties.get("city", ""),
         source="api-adresse.data.gouv.fr",
         score=score,
         obtained_at=date.today(),
@@ -65,50 +76,27 @@ class JobOffer(BaseModel):
     company: str
     lat: float
     lng: float
-    geocoding_source: str
-    geocoding_score: float
-    geocoding_date: date
+    geocoding_source: str | None
+    geocoding_score: float | None
+    geocoding_date: date | None
 
 class AdminJobOffer(JobOffer):
     lambert93_x: float
     lambert93_y: float
 
-MOCK_OFFERS: list[JobOffer] = [
-    JobOffer(id=1, title="Développeur·se web junior", company="Studio Kaleo", lat=48.8566, lng=2.3522,
-              geocoding_source="api-adresse.data.gouv.fr", geocoding_score=0.92, geocoding_date=date(2026, 9, 1)),
-    JobOffer(id=2, title="Data analyst", company="Nova Insights", lat=48.8606, lng=2.3376,
-              geocoding_source="api-adresse.data.gouv.fr", geocoding_score=0.88, geocoding_date=date(2026, 9, 1)),
-    JobOffer(id=3, title="Chef·fe de projet digital", company="Aster & Co", lat=48.8496, lng=2.3612,
-              geocoding_source="api-adresse.data.gouv.fr", geocoding_score=0.95, geocoding_date=date(2026, 9, 1)),
-    JobOffer(id=4, title="Designer UX/UI", company="Pixel Atelier", lat=48.8530, lng=2.3499,
-              geocoding_source="api-adresse.data.gouv.fr", geocoding_score=0.90, geocoding_date=date(2026, 9, 1)),
-    JobOffer(id=5, title="Community manager", company="Ampli Studio", lat=48.8666, lng=2.3450,
-              geocoding_source="api-adresse.data.gouv.fr", geocoding_score=0.87, geocoding_date=date(2026, 9, 1)),
-    JobOffer(id=6, title="Développeur·se backend", company="Kobalt Tech", lat=48.8460, lng=2.3700,
-              geocoding_source="api-adresse.data.gouv.fr", geocoding_score=0.93, geocoding_date=date(2026, 9, 1)),
-    JobOffer(id=7, title="Product owner", company="Fluent Labs", lat=48.8720, lng=2.3320,
-              geocoding_source="api-adresse.data.gouv.fr", geocoding_score=0.91, geocoding_date=date(2026, 9, 1)),
-    JobOffer(id=8, title="Chargé·e de communication", company="Ville de Lyon", lat=45.7640, lng=4.8357,
-              geocoding_source="api-adresse.data.gouv.fr", geocoding_score=0.94, geocoding_date=date(2026, 9, 1)),
-    JobOffer(id=9, title="Assistant·e RH", company="Groupe Solane", lat=45.7590, lng=4.8420,
-              geocoding_source="api-adresse.data.gouv.fr", geocoding_score=0.89, geocoding_date=date(2026, 9, 1)),
-    JobOffer(id=10, title="Comptable", company="Cabinet Verrier", lat=45.7700, lng=4.8280,
-              geocoding_source="api-adresse.data.gouv.fr", geocoding_score=0.86, geocoding_date=date(2026, 9, 1)),
-    JobOffer(id=11, title="Vendeur·se en boutique", company="Maison Ferran", lat=45.7610, lng=4.8500,
-              geocoding_source="api-adresse.data.gouv.fr", geocoding_score=0.85, geocoding_date=date(2026, 9, 1)),
-    JobOffer(id=12, title="Technicien·ne de maintenance", company="Atelier Nord", lat=43.2965, lng=5.3698,
-              geocoding_source="api-adresse.data.gouv.fr", geocoding_score=0.92, geocoding_date=date(2026, 9, 1)),
-    JobOffer(id=13, title="Agent·e logistique", company="PortSud Logistique", lat=43.3020, lng=5.3750,
-              geocoding_source="api-adresse.data.gouv.fr", geocoding_score=0.90, geocoding_date=date(2026, 9, 1)),
-    JobOffer(id=14, title="Serveur·se", company="Le Bistrot du Vieux Port", lat=43.2950, lng=5.3600,
-              geocoding_source="api-adresse.data.gouv.fr", geocoding_score=0.83, geocoding_date=date(2026, 9, 1)),
-    JobOffer(id=15, title="Ingénieur·e agronome", company="Ferme du Perche", lat=48.4500, lng=0.7500,
-              geocoding_source="api-adresse.data.gouv.fr", geocoding_score=0.78, geocoding_date=date(2026, 9, 1)),
-    JobOffer(id=16, title="Guide touristique", company="Office du Tourisme d'Annecy", lat=45.8992, lng=6.1294,
-              geocoding_source="api-adresse.data.gouv.fr", geocoding_score=0.88, geocoding_date=date(2026, 9, 1)),
-    JobOffer(id=17, title="Menuisier·ère", company="Atelier Bois Vivant", lat=47.2184, lng=-1.5536,
-              geocoding_source="api-adresse.data.gouv.fr", geocoding_score=0.81, geocoding_date=date(2026, 9, 1)),
-]
+def job_to_offer(job: Job) -> JobOffer:
+    assert job.location is not None
+    point = cast(Point, to_shape(job.location))
+    return JobOffer(
+        id=job.id,
+        title=job.title,
+        company=job.employer.company_name,
+        lat=point.y,
+        lng=point.x,
+        geocoding_source=job.geocoding_source,
+        geocoding_score=job.geocoding_score,
+        geocoding_date=job.geocoded_at.date() if job.geocoded_at else None,
+    )
 
 @app.get("/api/offres", response_model=list[JobOffer])
 def list_offers(
@@ -116,20 +104,84 @@ def list_offers(
     west: float | None = None,
     north: float | None = None,
     east: float | None = None,
+    session: Session = Depends(get_session),
 ) -> list[JobOffer]:
-    if south is None or west is None or north is None or east is None:
-        return MOCK_OFFERS
+    query = (
+        select(Job)
+        .options(joinedload(Job.employer))
+        .where(Job.location.isnot(None))
+    )
 
-    return [
-        offer
-        for offer in MOCK_OFFERS
-        if south <= offer.lat <= north and west <= offer.lng <= east
-    ]
+    if south is not None and west is not None and north is not None and east is not None:
+        envelope = ST_MakeEnvelope(west, south, east, north, 4326)
+        query = query.where(func.ST_Within(Job.location, envelope))
+
+    jobs = session.execute(query).scalars().all()
+    return [job_to_offer(job) for job in jobs]
 
 @app.get("/api/admin/offres", response_model=list[AdminJobOffer])
-def list_offers_admin() -> list[AdminJobOffer]:
+def list_offers_admin(session: Session = Depends(get_session)) -> list[AdminJobOffer]:
+    query = select(Job).options(joinedload(Job.employer)).where(Job.location.isnot(None))
+    jobs = session.execute(query).scalars().all()
+
     result = []
-    for offer in MOCK_OFFERS:
+    for job in jobs:
+        offer = job_to_offer(job)
         x, y = to_lambert93(offer.lat, offer.lng)
         result.append(AdminJobOffer(**offer.model_dump(), lambert93_x=x, lambert93_y=y))
     return result
+
+class OfferCreate(BaseModel):
+    title: str
+    company: str
+    description: str
+    address: str
+
+def slugify_email(company: str) -> str:
+    slug = "".join(c.lower() if c.isalnum() else "-" for c in company).strip("-")
+    return f"contact@{slug}.seed.local"
+
+def get_or_create_employer(session: Session, company_name: str) -> Employer:
+    existing = session.query(Employer).filter(Employer.company_name == company_name).first()
+    if existing:
+        return existing
+
+    user = User(
+        email=slugify_email(company_name),
+        password_hash="not-a-real-password",
+        role="employer",
+    )
+    session.add(user)
+    session.flush()
+
+    employer = Employer(user_id=user.id, company_name=company_name, activity_verified=True)
+    session.add(employer)
+    session.flush()
+    return employer
+
+@app.post("/api/offres", response_model=JobOffer, status_code=201)
+def create_offer(payload: OfferCreate, session: Session = Depends(get_session)) -> JobOffer:
+    try:
+        geo = geocode_address(payload.address)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    employer = get_or_create_employer(session, payload.company)
+
+    job = Job(
+        employer_id=employer.user_id,
+        title=payload.title,
+        description=payload.description,
+        location_address=payload.address,
+        location_city=geo.city or "Ville inconnue",
+        location=from_shape(Point(geo.lng, geo.lat), srid=4326),
+        geocoding_source=geo.source,
+        geocoding_score=geo.score,
+        geocoded_at=datetime.now(timezone.utc),
+        location_status="geocoded",
+    )
+    session.add(job)
+    session.commit()
+    session.refresh(job, attribute_names=["employer"])
+
+    return job_to_offer(job)
