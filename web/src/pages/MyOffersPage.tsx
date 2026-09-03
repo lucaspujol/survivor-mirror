@@ -10,10 +10,10 @@ type Offer = {
   id: number;
   title: string;
   description: string;
-  city: string;
-  address: string | null;
   contract_type: string;
   contract_duration: string | null;
+  address: string | null;
+  city: string;
   location_status: 'pending' | 'geocoded' | 'to_verify';
   application_count: number;
   created_at: string;
@@ -62,7 +62,6 @@ export function MyOffersPage() {
     setEditContractDuration(offer.contract_duration ?? '');
     setEditAddress(offer.address ?? '');
     setOriginalAddress(offer.address ?? '');
-    setActionError('');
   };
 
   const cancelEdit = () => {
@@ -74,7 +73,7 @@ export function MyOffersPage() {
     setActionError('');
     try {
       const addressChanged = editAddress !== originalAddress;
-
+ 
       const response = await fetch(`/api/offres/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -212,59 +211,56 @@ export function MyOffersPage() {
                               className="rounded-md border px-3 py-2 text-sm"
                             />
 
-                            <label className="text-sm font-medium" htmlFor={`description-${offer.id}`}>
-                              Description
-                            </label>
-                            <textarea
-                              id={`description-${offer.id}`}
-                              value={editDescription}
-                              onChange={(e) => setEditDescription(e.target.value)}
-                              rows={3}
-                              className="rounded-md border px-3 py-2 text-sm"
-                            />
+              <label className="text-sm font-medium" htmlFor={`description-${offer.id}`}>
+                Description
+              </label>
+              <textarea
+                id={`description-${offer.id}`}
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                rows={3}
+                className="rounded-md border px-3 py-2 text-sm"
+              />
 
-                            <label className="text-sm font-medium" htmlFor={`contract-type-${offer.id}`}>
-                              Type de contrat
-                            </label>
-                            <select
-                              id={`contract-type-${offer.id}`}
-                              value={editContractType}
-                              onChange={(e) => setEditContractType(e.target.value)}
-                              className="rounded-md border px-3 py-2 text-sm"
-                            >
-                              {CONTRACT_TYPES.map((type) => (
-                                <option key={type.value} value={type.value}>
-                                  {type.label}
-                                </option>
-                              ))}
-                            </select>
+                <label className="text-sm font-medium" htmlFor={`contract-type-${offer.id}`}>
+                  Type de contrat
+                </label>
+                <select
+                  id={`contract-type-${offer.id}`}
+                  value={editContractType}
+                  onChange={(e) => setEditContractType(e.target.value)}
+                  className="rounded-md border px-3 py-2 text-sm"
+                >
+                  {CONTRACT_TYPES.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
 
-                            {editContractInfo?.hasDuration && (
-                              <>
-                                <label
-                                  className="text-sm font-medium"
-                                  htmlFor={`contract-duration-${offer.id}`}
-                                >
-                                  Durée
-                                </label>
-                                <input
-                                  id={`contract-duration-${offer.id}`}
-                                  value={editContractDuration}
-                                  onChange={(e) => setEditContractDuration(e.target.value)}
-                                  placeholder="ex: 3 mois, 6 mois, 1 an"
-                                  className="rounded-md border px-3 py-2 text-sm"
-                                />
-                              </>
-                            )}
+                {editContractInfo?.hasDuration && (
+                  <>
+                    <label className="text-sm font-medium" htmlFor={`contract-duration-${offer.id}`}>
+                      Durée
+                    </label>
+                    <input
+                      id={`contract-duration-${offer.id}`}
+                      value={editContractDuration}
+                      onChange={(e) => setEditContractDuration(e.target.value)}
+                      placeholder="ex: 3 mois, 6 mois, 1 an"
+                      className="rounded-md border px-3 py-2 text-sm"
+                    />
+                  </>
+                )}
 
-                            <label className="text-sm font-medium" htmlFor={`address-${offer.id}`}>
-                              Adresse
-                            </label>
-                            <AddressAutocomplete
-                              id={`address-${offer.id}`}
-                              value={editAddress}
-                              onChange={setEditAddress}
-                            />
+                <label className="text-sm font-medium" htmlFor={`address-${offer.id}`}>
+                  Adresse
+                </label>
+                <AddressAutocomplete
+                  id={`address-${offer.id}`}
+                  value={editAddress}
+                  onChange={setEditAddress}
+                />
 
                             <div className="mt-1 flex gap-2">
                               <button

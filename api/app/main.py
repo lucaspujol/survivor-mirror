@@ -155,8 +155,8 @@ class OfferCreate(BaseModel):
 
     title: str
     description: str
-    contract_type: str  # "cdi", "cdd", "stage", "alternance", "interim", "freelance"
-    contract_duration: str | None = None  # ex: "3 mois" — pertinent hors CDI
+    contract_type: str
+    contract_duration: str | None = None
     address: str
 
 @app.post("/api/offres", response_model=JobOffer, status_code=201)
