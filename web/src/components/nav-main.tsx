@@ -6,12 +6,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
-
-export type NavItem = {
-  title: string
-  url: string
-  icon: React.ReactNode
-}
+import type { NavItem } from '@/lib/navigation'
 
 export function NavMain({ label, items }: { label: string; items: NavItem[] }) {
   const { pathname } = useLocation()
@@ -27,7 +22,7 @@ export function NavMain({ label, items }: { label: string; items: NavItem[] }) {
               isActive={pathname === item.url}
               render={<Link to={item.url} />}
             >
-              {item.icon}
+              <item.icon />
               <span>{item.title}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>

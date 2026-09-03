@@ -1,5 +1,5 @@
 import { Link } from 'react-router'
-import { NavMain, type NavItem } from '@/components/nav-main'
+import { NavMain } from '@/components/nav-main'
 import { NavUser } from '@/components/nav-user'
 import { cn } from '@/lib/utils'
 import {
@@ -11,24 +11,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { useAuth } from '@/lib/auth'
-import {
-  BriefcaseIcon,
-  FileTextIcon,
-  FlagIcon,
-  MapIcon,
-  UsersIcon,
-} from 'lucide-react'
-
-const mainItems: NavItem[] = [
-  { title: 'Carte', url: '/', icon: <MapIcon /> },
-  { title: 'Mes candidatures', url: '/candidatures', icon: <FileTextIcon /> },
-  { title: 'Mes offres', url: '/mes-offres', icon: <BriefcaseIcon /> },
-]
-
-const adminItems: NavItem[] = [
-  { title: 'Signalements', url: '/admin/signalements', icon: <FlagIcon /> },
-  { title: 'Utilisateurs', url: '/admin/utilisateurs', icon: <UsersIcon /> },
-]
+import { navGroupsFor } from '@/lib/navigation'
 
 function TricolorFlag({
   className,
@@ -104,8 +87,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </Link>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain label="Navigation" items={mainItems} />
-        {user?.role === 'admin' && <NavMain label="Administration" items={adminItems} />}
+        {navGroupsFor(user?.role ?? null).map((group) => (
+          <NavMain key={group.label} label={group.label} items={group.items} />
+        ))}
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={user} />

@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { AuthLayout } from '@/components/layout/AuthLayout'
 import { RequireAuth } from '@/components/layout/RequireAuth'
+import { RequireRole } from '@/components/layout/RequireRole'
 import { AccountPage } from '@/pages/AccountPage'
 import { AdminReportsPage } from '@/pages/AdminReportsPage'
 import { AdminUsersPage } from '@/pages/AdminUsersPage'
@@ -23,8 +24,17 @@ function App() {
         <Route index element={<HomePage />} />
         <Route element={<RequireAuth />}>
           <Route path="me" element={<AccountPage />} />
+        </Route>
+
+        <Route element={<RequireRole allow={['seeker']} />}>
           <Route path="candidatures" element={<ApplicationsPage />} />
+        </Route>
+
+        <Route element={<RequireRole allow={['employer']} />}>
           <Route path="mes-offres" element={<MyOffersPage />} />
+        </Route>
+
+        <Route element={<RequireRole allow={['admin']} />}>
           <Route path="admin/signalements" element={<AdminReportsPage />} />
           <Route path="admin/utilisateurs" element={<AdminUsersPage />} />
         </Route>
