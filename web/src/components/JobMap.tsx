@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, ZoomControl } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+import { LocateControl } from './Locatecontrol';
 
 // @ts-expect-error _getIconUrl
 delete L.Icon.Default.prototype._getIconUrl;
@@ -112,8 +113,11 @@ export function JobMap({ refreshSignal }: JobMapProps) {
     }, DEBOUNCE_MS);
   }, []);
 
+  const [isMapReady, setIsMapReady] = useState(false);
+
   const handleMapReady = useCallback ((map: L.Map) => {
     mapInstanceRef.current = map;
+    setIsMapReady(true);
   }, []);
 
   const isFirstRender = useRef(true);
@@ -147,14 +151,19 @@ export function JobMap({ refreshSignal }: JobMapProps) {
         </div>
       )}
 
+      <LocateControl map={isMapReady ? mapInstanceRef.current : null} />
+
       <MapContainer
         center={DEFAULT_CENTER}
         zoom={DEFAULT_ZOOM}
         minZoom={2}
         maxBounds={WORLD_BOUNDS}
         maxBoundsViscosity={0.8}
+        worldCopyJump
+        zoomControl={false}
         style={{ height: '600px', width: '100%' }}
       >
+        <ZoomControl position='topright' />
         <TileLayer
           attribution='&copy; <a href="https://www.ign.fr/">IGN</a> - Géoplateforme'
           url="https://data.geopf.fr/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png"
