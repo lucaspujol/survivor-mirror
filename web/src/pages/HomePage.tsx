@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { JobMap } from '@/components/JobMap';
 import { CreateOfferForm } from '@/components/Createofferform';
 
 export function HomePage() {
+  const [refreshSignal, setRefreshSignal] = useState(0);
+
   return (
     <div>
       <h1 className="text-2xl font-semibold">Offres d'emploi</h1>
@@ -10,8 +13,8 @@ export function HomePage() {
       </p>
 
       <div className="mt-6">
-        <JobMap />
-        <CreateOfferForm />
+        <JobMap refreshSignal={refreshSignal} />
+        <CreateOfferForm onCreated={() => setRefreshSignal((n) => n + 1)} />
       </div>
     </div>
   )
