@@ -41,6 +41,9 @@ ROLES = ("seeker", "employer", "admin")
 APPLICATION_STATUSES = ("sent", "under_review", "accepted", "rejected")
 # `to_verify` = location needs checking (doubtful or failed geocoding).
 LOCATION_STATUSES = ("pending", "geocoded", "to_verify")
+# Contract types. `contract_duration` (free text, e.g. "3 mois") complements
+# the fixed-term ones (cdd, stage, alternance, interim); left null for cdi.
+CONTRACT_TYPES = ("cdi", "cdd", "stage", "alternance", "interim", "freelance")
 
 role_enum = Enum(*ROLES, name="user_role", native_enum=False, create_constraint=False)
 application_status_enum = Enum(
@@ -52,6 +55,13 @@ application_status_enum = Enum(
 location_status_enum = Enum(
     *LOCATION_STATUSES,
     name="location_status",
+    native_enum=False,
+    create_constraint=False,
+)
+
+contract_type_enum = Enum(
+    *CONTRACT_TYPES,
+    name="contract_type",
     native_enum=False,
     create_constraint=False,
 )
@@ -163,6 +173,10 @@ class Job(Base):
             _in_check("location_status", LOCATION_STATUSES),
             name="ck_jobs_location_status",
         ),
+        CheckConstraint(
+            _in_check("contract_type", CONTRACT_TYPES),
+            name="ck_jobs_contract_type",
+        ),
         Index("ix_jobs_employer_id", "employer_id"),
         # Map search: visible bounds first, then distance.
         Index("ix_jobs_location", "location", postgresql_using="gist"),
@@ -174,6 +188,13 @@ class Job(Base):
     )
     title: Mapped[str] = mapped_column(Text, nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
+    # ex: "cdi", "cdd", "stage"... see CONTRACT_TYPES.
+    contract_type: Mapped[str] = mapped_column(
+        contract_type_enum, nullable=False, server_default=text("'cdi'")
+    )
+    # Free text, e.g. "3 mois" - relevant for cdd/stage/alternance/interim,
+    # left null for cdi/freelance.
+    contract_duration: Mapped[str | None] = mapped_column(Text)
     # Address as entered by the employer, sent to the Adresse API.
     location_address: Mapped[str | None] = mapped_column(Text)
     location_city: Mapped[str] = mapped_column(Text, nullable=False)

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
-import { AddressAutocomplete } from '@/components/AdressAutocomplete';
+import { AddressAutocomplete } from '@/components/AddressAutocomplete';
+import { CONTRACT_TYPES } from './contractTypes';
 
 interface CreateOfferFormProps {
   onCreated?: () => void;
@@ -8,9 +9,13 @@ interface CreateOfferFormProps {
 export function CreateOfferForm({ onCreated }: CreateOfferFormProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [contractType, setContractType] = useState('cdi');
+  const [contractDuration, setContractDuration] = useState('');
   const [address, setAddress] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+
+  const selectedContractType = CONTRACT_TYPES.find((c) => c.value === contractType);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -24,9 +29,14 @@ export function CreateOfferForm({ onCreated }: CreateOfferFormProps) {
       const response = await fetch('/api/offres', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // The company is not sent: the API attaches the offer to the
-        // employer whose session publishes it.
-        body: JSON.stringify({ title, description, address }),
+        body: JSON.stringify({
+          title,
+          description,
+          contract_type: contractType,
+          contract_duration: selectedContractType?.hasDuration ? contractDuration : null,
+          address
+        }),
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -36,6 +46,8 @@ export function CreateOfferForm({ onCreated }: CreateOfferFormProps) {
 
       setTitle('');
       setDescription('');
+      setContractType('cdi');
+      setContractDuration('');
       setAddress('');
       setStatus('idle');
       onCreated?.();
@@ -81,6 +93,40 @@ export function CreateOfferForm({ onCreated }: CreateOfferFormProps) {
           className="rounded-md border px-3 py-2 text-sm"
         />
       </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="contractType" className="text-sm font-medium">
+          Type de contrat
+        </label>
+        <select
+          id="contractType"
+          value={contractType}
+          onChange={(e) => setContractType(e.target.value)}
+          className="rounded-md border px-3 py-2 text-sm"
+        >
+          {CONTRACT_TYPES.map((type) => (
+            <option key={type.value} value={type.value}>
+              {type.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {selectedContractType?.hasDuration && (
+        <div className="flex flex-col gap-1">
+          <label htmlFor="contractDuration" className="text-sm font-medium">
+            Durée
+          </label>
+          <input
+            id="contractDuration"
+            value={contractDuration}
+            onChange={(e) => setContractDuration(e.target.value)}
+            placeholder="ex: 3 mois, 6 mois, 1 an"
+            required
+            className="rounded-md border px-3 py-2 text-sm"
+          />
+        </div>
+      )}
 
       <div className="flex flex-col gap-1">
         <label htmlFor="address" className="text-sm font-medium">
