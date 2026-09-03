@@ -79,6 +79,9 @@ class JobOffer(BaseModel):
     title: str
     company: str
     description: str
+    contract_type: str
+    contract_duration: str | None
+    address: str | None
     city: str
     lat: float
     lng: float
@@ -98,6 +101,9 @@ def job_to_offer(job: Job) -> JobOffer:
         title=job.title,
         company=job.employer.company_name,
         description=job.description,
+        contract_type=job.contract_type,
+        contract_duration=job.contract_duration,
+        address=job.location_address,
         city=job.location_city,
         lat=point.y,
         lng=point.x,
@@ -143,6 +149,8 @@ class OfferCreate(BaseModel):
     title: str
     company: str
     description: str
+    contract_type: str
+    contract_duration: str | None = None
     address: str
 
 def slugify_email(company: str) -> str:
@@ -180,6 +188,8 @@ def create_offer(payload: OfferCreate, session: Session = Depends(get_session)) 
         employer_id=employer.user_id,
         title=payload.title,
         description=payload.description,
+        contract_type=payload.contract_type,
+        contract_duration=payload.contract_duration,
         location_address=payload.address,
         location_city=geo.city or "Ville inconnue",
         location=from_shape(Point(geo.lng, geo.lat), srid=4326),
@@ -197,6 +207,8 @@ def create_offer(payload: OfferCreate, session: Session = Depends(get_session)) 
 class OfferUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
+    contract_type: str | None = None
+    contract_duration: str | None = None
     address: str | None = None
 
 def get_job_or_404(session: Session, offer_id: int) -> Job:
@@ -215,6 +227,10 @@ def update_offer(
         job.title = payload.title
     if payload.description is not None:
         job.description = payload.description
+    if payload.contract_type is not None:
+        job.contract_type = payload.contract_type
+    if payload.contract_duration is not None:
+        job.contract_duration = payload.contract_duration
 
     if payload.address is not None:
         try:

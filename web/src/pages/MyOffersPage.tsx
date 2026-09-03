@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react';
+import { AddressAutocomplete } from '@/components/AdressAutocomplete';
+import { CONTRACT_TYPES } from '@/components/contractTypes';
 
 interface JobOffer {
   id: number;
   title: string;
   company: string;
   description: string;
+  contract_type: string;
+  contract_duration: string | null;
+  address: string | null;
   city: string;
   lat: number;
   lng: number;
@@ -18,8 +23,14 @@ export function MyOffersPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
+  const [editContractType, setEditContractType] = useState('cdi');
+  const [editContractDuration, setEditContractDuration] = useState('');
+  const [editAddress, setEditAddress] = useState('');
+  const [originalAddress, setOriginalAddress] = useState('');
   const [savingId, setSavingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const editContractInfo = CONTRACT_TYPES.find((c) => c.value === editContractType);
 
   const fetchOffers = () => {
     setLoading(true);
@@ -39,6 +50,10 @@ export function MyOffersPage() {
     setEditingId(offer.id);
     setEditTitle(offer.title);
     setEditDescription(offer.description);
+    setEditContractType(offer.contract_type);
+    setEditContractDuration(offer.contract_duration ?? '');
+    setEditAddress(offer.address ?? '');
+    setOriginalAddress(offer.address ?? '');
   };
 
   const cancelEdit = () => {
@@ -49,10 +64,18 @@ export function MyOffersPage() {
     setSavingId(id);
     setError('');
     try {
+      const addressChanged = editAddress !== originalAddress;
+ 
       const response = await fetch(`/api/offres/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: editTitle, description: editDescription }),
+        body: JSON.stringify({
+          title: editTitle,
+          description: editDescription,
+          contract_type: editContractType,
+          contract_duration: editContractInfo?.hasDuration ? editContractDuration : null,
+          ...(addressChanged ? { address: editAddress } : {}),
+        }),
       });
 
       if (!response.ok) {
@@ -126,6 +149,46 @@ export function MyOffersPage() {
                 rows={3}
                 className="rounded-md border px-3 py-2 text-sm"
               />
+
+                <label className="text-sm font-medium" htmlFor={`contract-type-${offer.id}`}>
+                  Type de contrat
+                </label>
+                <select
+                  id={`contract-type-${offer.id}`}
+                  value={editContractType}
+                  onChange={(e) => setEditContractType(e.target.value)}
+                  className="rounded-md border px-3 py-2 text-sm"
+                >
+                  {CONTRACT_TYPES.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
+
+                {editContractInfo?.hasDuration && (
+                  <>
+                    <label className="text-sm font-medium" htmlFor={`contract-duration-${offer.id}`}>
+                      Durée
+                    </label>
+                    <input
+                      id={`contract-duration-${offer.id}`}
+                      value={editContractDuration}
+                      onChange={(e) => setEditContractDuration(e.target.value)}
+                      placeholder="ex: 3 mois, 6 mois, 1 an"
+                      className="rounded-md border px-3 py-2 text-sm"
+                    />
+                  </>
+                )}
+
+                <label className="text-sm font-medium" htmlFor={`address-${offer.id}`}>
+                  Adresse
+                </label>
+                <AddressAutocomplete
+                  id={`address-${offer.id}`}
+                  value={editAddress}
+                  onChange={setEditAddress}
+                />
 
               <div className="mt-1 flex gap-2">
                 <button
