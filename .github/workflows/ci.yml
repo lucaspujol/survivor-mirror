@@ -212,6 +212,9 @@ jobs:
         with:
           name: chomagego-demo-build
           path: build/chomagego-demo-build
+          # Without this the action silently drops dotfiles, and the published
+          # bundle would no longer match what the build script produces.
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 30
 
