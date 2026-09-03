@@ -78,6 +78,11 @@ class JobOffer(BaseModel):
     id: int
     title: str
     company: str
+    employer_id: int
+    description: str
+    city: str
+    address: str | None
+    created_at: datetime
     lat: float
     lng: float
     geocoding_source: str | None
@@ -95,6 +100,11 @@ def job_to_offer(job: Job) -> JobOffer:
         id=job.id,
         title=job.title,
         company=job.employer.company_name,
+        employer_id=job.employer_id,
+        description=job.description,
+        city=job.location_city,
+        address=job.location_address,
+        created_at=job.created_at,
         lat=point.y,
         lng=point.x,
         geocoding_source=job.geocoding_source,
