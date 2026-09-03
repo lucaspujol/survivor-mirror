@@ -70,8 +70,8 @@ primary key and a foreign key, `ON DELETE CASCADE`).
 | `user_id` | `bigint` | PK, FK → `users.id` |
 | `first_name`, `last_name` | `text` | NOT NULL |
 | `skills` | `text[]` | NOT NULL, default `{}` |
-| `experience` | `text` | nullable — free-text work experience |
-| `availability` | `date` | nullable — available from |
+| `experience` | `text` | nullable - free-text work experience |
+| `availability` | `date` | nullable - available from |
 
 ### `employers`
 
@@ -85,9 +85,9 @@ validation of the company's activity.
 | `id` | `bigserial` | PK |
 | `employer_id` | `bigint` | NOT NULL, FK → `employers.user_id`, CASCADE |
 | `title`, `description` | `text` | NOT NULL |
-| `location_address` | `text` | nullable — address sent to the Adresse API |
+| `location_address` | `text` | nullable - address sent to the Adresse API |
 | `location_city` | `text` | NOT NULL |
-| `location` | `geometry(Point, 4326)` | nullable — WGS84 point |
+| `location` | `geometry(Point, 4326)` | nullable - WGS84 point |
 | `geocoding_source` | `text` | nullable |
 | `geocoding_score` | `double precision` | nullable, CHECK between 0 and 1 |
 | `geocoded_at` | `timestamptz` | nullable |

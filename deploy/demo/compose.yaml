@@ -1,0 +1,67 @@
+# ChômageGo — demo stack, self-contained.
+#
+# This file ships inside the `chomagego-demo-build` artifact and runs the
+# prototype from the build output alone: no repository clone, no local
+# toolchain, nothing to compile. See DEMO.md.
+#
+# Every credential below is a fictional placeholder meant for the demo only.
+
+services:
+  db:
+    image: postgis/postgis:16-3.4-alpine
+    environment:
+      POSTGRES_USER: chomagego
+      POSTGRES_PASSWORD: chomagego-demo
+      POSTGRES_DB: chomagego
+    volumes:
+      - demo_db_data:/var/lib/postgresql/data
+    healthcheck:
+      # -h: without a host, pg_isready answers OK as soon as the temporary
+      # initdb server is up, well before Postgres accepts TCP connections.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U chomagego -d chomagego"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  api:
+    build: ./api
+    # Migrations, then the demo dataset, then the server. The seed is
+    # idempotent, so restarting the stack does not duplicate anything.
+    command: >
+      sh -c "alembic upgrade head
+      && python -m app.seed
+      && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://chomagego:chomagego-demo@db:5432/chomagego
+      JWT_SECRET: demo-only-not-a-real-secret
+      JWT_EXPIRE_DAYS: 7
+      COOKIE_SECURE: false
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+
+  web:
+    # nginx serving the compiled frontend and proxying /api to the API, so the
+    # auth cookie stays same-origin.
+    build: ./web
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  demo_db_data:

@@ -15,13 +15,17 @@ export function MapWorkspace() {
   const { offers, isLoading, setBounds, refresh } = useOffersInBounds()
   const [query, setQuery] = useState('')
   const [city, setCity] = useState(ALL)
+  const [contractType, setContractType] = useState(ALL)
   const [period, setPeriod] = useState(ALL)
   const [selected, setSelected] = useState<Offer | null>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
 
   const visible = useMemo(
-    () => offers.filter((offer) => matchesFilters(offer, { query, city, period })),
-    [offers, query, city, period],
+    () =>
+      offers.filter((offer) =>
+        matchesFilters(offer, { query, city, contractType, period }),
+      ),
+    [offers, query, city, contractType, period],
   )
 
   // Focusing an offer zooms in, which would otherwise refetch a viewport
@@ -46,6 +50,8 @@ export function MapWorkspace() {
         cities={cities}
         city={city}
         onCityChange={setCity}
+        contractType={contractType}
+        onContractTypeChange={setContractType}
         period={period}
         onPeriodChange={setPeriod}
         onOfferCreated={refresh}

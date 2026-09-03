@@ -5,12 +5,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { CONTRACT_TYPES } from '@/components/contractTypes'
 import { ALL } from '@/lib/offers'
 
 type MapFiltersProps = {
   cities: string[]
   city: string
   onCityChange: (city: string) => void
+  contractType: string
+  onContractTypeChange: (contractType: string) => void
   period: string
   onPeriodChange: (period: string) => void
 }
@@ -19,6 +22,8 @@ export function MapFilters({
   cities,
   city,
   onCityChange,
+  contractType,
+  onContractTypeChange,
   period,
   onPeriodChange,
 }: MapFiltersProps) {
@@ -33,6 +38,23 @@ export function MapFilters({
           {cities.map((name) => (
             <SelectItem key={name} value={name}>
               {name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      <Select
+        value={contractType}
+        onValueChange={(value) => onContractTypeChange(String(value))}
+      >
+        <SelectTrigger className="h-9 min-w-40" aria-label="Filtrer par type de contrat">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL}>Tous les contrats</SelectItem>
+          {CONTRACT_TYPES.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
             </SelectItem>
           ))}
         </SelectContent>

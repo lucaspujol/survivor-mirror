@@ -1,5 +1,5 @@
 import { Link } from 'react-router'
-import { NavMain } from '@/components/nav-main'
+import { NavMain, type NavItem } from '@/components/nav-main'
 import { NavUser } from '@/components/nav-user'
 import { cn } from '@/lib/utils'
 import {
@@ -10,8 +10,22 @@ import {
   SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar'
-import { useAuth } from '@/lib/auth'
-import { navGroupsFor } from '@/lib/navigation'
+import { useAuth, type Role } from '@/lib/auth'
+import { BriefcaseIcon, FileTextIcon, MapIcon, UsersIcon } from 'lucide-react'
+
+const mapItem: NavItem = { title: 'Carte', url: '/', icon: <MapIcon /> }
+
+// Only what the role can actually open: an entry that would land on a 404 or
+// on a screen the API refuses is worse than no entry at all.
+const roleItems: Record<Role, NavItem[]> = {
+  seeker: [{ title: 'Mes candidatures', url: '/candidatures', icon: <FileTextIcon /> }],
+  employer: [{ title: 'Mes offres', url: '/mes-offres', icon: <BriefcaseIcon /> }],
+  admin: [],
+}
+
+const adminItems: NavItem[] = [
+  { title: 'Utilisateurs', url: '/admin/utilisateurs', icon: <UsersIcon /> },
+]
 
 function TricolorFlag({
   className,
@@ -87,9 +101,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </Link>
       </SidebarHeader>
       <SidebarContent>
-        {navGroupsFor(user?.role ?? null).map((group) => (
-          <NavMain key={group.label} label={group.label} items={group.items} />
-        ))}
+        <NavMain
+          label="Navigation"
+          items={[mapItem, ...(user ? roleItems[user.role] : [])]}
+        />
+        {user?.role === 'admin' && <NavMain label="Administration" items={adminItems} />}
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={user} />

@@ -11,9 +11,10 @@ from shapely.geometry import Point
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 from app.db import get_session
-from app.models import Employer, Job, User
+from app.deps import CurrentAdmin, CurrentEmployer, CurrentUser
+from app.models import Employer, Job
 
-from app.routers import auth
+from app.routers import auth, dashboard
 
 app = FastAPI(
     title="ChômageGo API",
@@ -30,6 +31,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(dashboard.router)
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
@@ -80,8 +82,10 @@ class JobOffer(BaseModel):
     company: str
     employer_id: int
     description: str
-    city: str
+    contract_type: str
+    contract_duration: str | None
     address: str | None
+    city: str
     created_at: datetime
     lat: float
     lng: float
@@ -102,8 +106,10 @@ def job_to_offer(job: Job) -> JobOffer:
         company=job.employer.company_name,
         employer_id=job.employer_id,
         description=job.description,
-        city=job.location_city,
+        contract_type=job.contract_type,
+        contract_duration=job.contract_duration,
         address=job.location_address,
+        city=job.location_city,
         created_at=job.created_at,
         lat=point.y,
         lng=point.x,
@@ -134,7 +140,9 @@ def list_offers(
     return [job_to_offer(job) for job in jobs]
 
 @app.get("/api/admin/offres", response_model=list[AdminJobOffer])
-def list_offers_admin(session: Session = Depends(get_session)) -> list[AdminJobOffer]:
+def list_offers_admin(
+    _admin: CurrentAdmin, session: Session = Depends(get_session)
+) -> list[AdminJobOffer]:
     query = select(Job).options(joinedload(Job.employer)).where(Job.location.isnot(None))
     jobs = session.execute(query).scalars().all()
 
@@ -146,46 +154,38 @@ def list_offers_admin(session: Session = Depends(get_session)) -> list[AdminJobO
     return result
 
 class OfferCreate(BaseModel):
+    """The company is not part of the payload: an offer belongs to the
+    employer whose session publishes it."""
+
     title: str
-    company: str
     description: str
+    contract_type: str
+    contract_duration: str | None = None
     address: str
 
-def slugify_email(company: str) -> str:
-    slug = "".join(c.lower() if c.isalnum() else "-" for c in company).strip("-")
-    return f"contact@{slug}.seed.local"
-
-def get_or_create_employer(session: Session, company_name: str) -> Employer:
-    existing = session.query(Employer).filter(Employer.company_name == company_name).first()
-    if existing:
-        return existing
-
-    user = User(
-        email=slugify_email(company_name),
-        password_hash="not-a-real-password",
-        role="employer",
-    )
-    session.add(user)
-    session.flush()
-
-    employer = Employer(user_id=user.id, company_name=company_name, activity_verified=True)
-    session.add(employer)
-    session.flush()
-    return employer
-
 @app.post("/api/offres", response_model=JobOffer, status_code=201)
-def create_offer(payload: OfferCreate, session: Session = Depends(get_session)) -> JobOffer:
+def create_offer(
+    payload: OfferCreate,
+    user: CurrentEmployer,
+    session: Session = Depends(get_session),
+) -> JobOffer:
+    employer = session.get(Employer, user.id)
+    if employer is None:
+        # An employer account always carries its profile row; a missing one
+        # means the account is broken, not that the request is wrong.
+        raise HTTPException(status_code=500, detail="Employer profile is missing")
+
     try:
         geo = geocode_address(payload.address)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    employer = get_or_create_employer(session, payload.company)
-
     job = Job(
         employer_id=employer.user_id,
         title=payload.title,
         description=payload.description,
+        contract_type=payload.contract_type,
+        contract_duration=payload.contract_duration,
         location_address=payload.address,
         location_city=geo.city or "Ville inconnue",
         location=from_shape(Point(geo.lng, geo.lat), srid=4326),
@@ -199,3 +199,75 @@ def create_offer(payload: OfferCreate, session: Session = Depends(get_session)) 
     session.refresh(job, attribute_names=["employer"])
 
     return job_to_offer(job)
+
+class OfferUpdate(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    contract_type: str | None = None
+    contract_duration: str | None = None
+    address: str | None = None
+
+def get_job_or_404(session: Session, offer_id: int) -> Job:
+    job = session.get(Job, offer_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail=f"Offre {offer_id} introuvable.")
+    return job
+
+def require_owner_or_admin(user, job: Job) -> None:
+    """L'admin modère (peut agir sur toute offre) ; un employeur ne touche
+    qu'à ses propres offres ; personne d'autre n'a le droit.
+    """
+    if user.role == "admin":
+        return
+    if user.role == "employer" and job.employer_id == user.id:
+        return
+    raise HTTPException(
+        status_code=403, detail="Vous n'avez pas le droit de modifier cette offre."
+    )
+
+@app.patch("/api/offres/{offer_id}", response_model=JobOffer)
+def update_offer(
+    offer_id: int,
+    payload: OfferUpdate,
+    current_user: CurrentUser,
+    session: Session = Depends(get_session),
+) -> JobOffer:
+    job = get_job_or_404(session, offer_id)
+    require_owner_or_admin(current_user, job)
+
+    if payload.title is not None:
+        job.title = payload.title
+    if payload.description is not None:
+        job.description = payload.description
+    if payload.contract_type is not None:
+        job.contract_type = payload.contract_type
+    if payload.contract_duration is not None:
+        job.contract_duration = payload.contract_duration
+
+    if payload.address is not None:
+        try:
+            geo = geocode_address(payload.address)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+        job.location_address = payload.address
+        job.location_city = geo.city or "Ville inconnue"
+        job.location = from_shape(Point(geo.lng, geo.lat), srid=4326)
+        job.geocoding_source = geo.source
+        job.geocoding_score = geo.score
+        job.geocoded_at = datetime.now(timezone.utc)
+        job.location_status = "geocoded"
+
+    session.commit()
+    session.refresh(job, attribute_names=["employer"])
+
+    return job_to_offer(job)
+
+@app.delete("/api/offres/{offer_id}", status_code=204)
+def delete_offer(
+    offer_id: int, current_user: CurrentUser, session: Session = Depends(get_session)
+) -> None:
+    job = get_job_or_404(session, offer_id)
+    require_owner_or_admin(current_user, job)
+    session.delete(job)
+    session.commit()

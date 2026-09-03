@@ -1,5 +1,6 @@
 import { BuildingIcon, MapPinIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { contractLabel } from '@/components/offers/ContractBadge'
 import { publishedLabel, type Offer } from '@/lib/offers'
 
 type OfferListItemProps = {
@@ -30,6 +31,7 @@ export function OfferListItem({ offer, isSelected, onSelect }: OfferListItemProp
         <span className="truncate">{offer.city}</span>
       </p>
       <p className="mt-2 text-xs text-muted-foreground">
+        {contractLabel(offer.contract_type, offer.contract_duration)} ·{' '}
         {publishedLabel(offer.created_at)}
       </p>
     </button>

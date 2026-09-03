@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { PlusIcon } from 'lucide-react'
-import { CreateOfferForm } from '@/components/offers/CreateOfferForm'
+import { CreateOfferForm } from '@/components/Createofferform'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -14,14 +14,10 @@ import {
 type CreateOfferDialogProps = {
   company: string
   onCreated?: () => void
-  triggerLabel?: string
 }
 
-export function CreateOfferDialog({
-  company,
-  onCreated,
-  triggerLabel = 'Publier une offre',
-}: CreateOfferDialogProps) {
+/** The map has no room for a permanent form, so publishing happens in a dialog. */
+export function CreateOfferDialog({ company, onCreated }: CreateOfferDialogProps) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -30,7 +26,7 @@ export function CreateOfferDialog({
         render={
           <Button>
             <PlusIcon />
-            {triggerLabel}
+            Publier une offre
           </Button>
         }
       />
@@ -38,12 +34,10 @@ export function CreateOfferDialog({
         <DialogHeader>
           <DialogTitle>Publier une offre</DialogTitle>
           <DialogDescription>
-            Publiée au nom de {company}. L'offre est archivée après 30 jours.
+            Publiée au nom de {company} et placée sur la carte.
           </DialogDescription>
         </DialogHeader>
         <CreateOfferForm
-          company={company}
-          onCancel={() => setOpen(false)}
           onCreated={() => {
             setOpen(false)
             onCreated?.()

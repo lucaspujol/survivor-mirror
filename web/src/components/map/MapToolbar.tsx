@@ -10,6 +10,8 @@ type MapToolbarProps = {
   cities: string[]
   city: string
   onCityChange: (city: string) => void
+  contractType: string
+  onContractTypeChange: (contractType: string) => void
   period: string
   onPeriodChange: (period: string) => void
   onOfferCreated: () => void
@@ -22,6 +24,8 @@ export function MapToolbar({
   cities,
   city,
   onCityChange,
+  contractType,
+  onContractTypeChange,
   period,
   onPeriodChange,
   onOfferCreated,
@@ -46,6 +50,8 @@ export function MapToolbar({
         cities={cities}
         city={city}
         onCityChange={onCityChange}
+        contractType={contractType}
+        onContractTypeChange={onContractTypeChange}
         period={period}
         onPeriodChange={onPeriodChange}
       />

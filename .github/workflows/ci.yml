@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   web:
-    name: Frontend — lint & build
+    name: Frontend - lint & build
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
@@ -35,7 +35,7 @@ jobs:
       - run: npm run build
 
   stack:
-    name: Stack — compose, migrations & schema
+    name: Stack - compose, migrations & schema
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -97,4 +97,146 @@ jobs:
 
       - name: Tear down
         if: always()
+        run: docker compose down -v
+
+  demo-build:
+    name: Demo build — bundle, smoke test & artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      BUNDLE: build/chomagego-demo-build
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Same major as web/Dockerfile.
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build the demo bundle
+        run: ./scripts/build-demo-bundle.sh
+
+      - name: The bundle carries a real build output
+        run: |
+          test -f "$BUNDLE/web/dist/index.html"
+          test -f "$BUNDLE/compose.yaml"
+          test -f "$BUNDLE/DEMO.md"
+          test -f "$BUNDLE/BUILD-INFO.txt"
+          test -f "$BUNDLE/api/requirements.txt"
+          test -d "$BUNDLE/api/migrations/versions"
+          # Vite emits hashed bundles: no assets means no build.
+          ls "$BUNDLE"/web/dist/assets/*.js > /dev/null
+          # The compiled page must not still point at the TypeScript entry.
+          ! grep -q '/src/main.tsx' "$BUNDLE/web/dist/index.html"
+
+      - name: Start the demo stack from the bundle
+        working-directory: build/chomagego-demo-build
+        run: docker compose up -d --build
+
+      - name: The application answers
+        run: |
+          for i in $(seq 1 90); do
+            if curl -sf http://localhost:8080/api/health > /dev/null \
+               && curl -sf http://localhost:8080/ > /dev/null; then
+              curl -s http://localhost:8080/api/health && echo && exit 0
+            fi
+            sleep 2
+          done
+          echo "the demo stack did not become ready in time" >&2
+          exit 1
+
+      - name: Smoke check the stack built from the bundle
+        run: ./scripts/smoke-demo-stack.sh http://localhost:8080
+
+      - name: Migrations are applied and match the models
+        working-directory: build/chomagego-demo-build
+        run: |
+          docker compose exec -T api alembic current
+          docker compose exec -T api alembic check
+
+      - name: The seed is idempotent
+        working-directory: build/chomagego-demo-build
+        run: |
+          before=$(curl -sf http://localhost:8080/api/offres | jq 'length')
+          docker compose exec -T api python -m app.seed
+          after=$(curl -sf http://localhost:8080/api/offres | jq 'length')
+          echo "offers before: $before, after a second seed: $after"
+          [ "$before" = "$after" ] || { echo "the seed duplicated rows" >&2; exit 1; }
+
+      - name: Dump logs on failure
+        if: failure()
+        working-directory: build/chomagego-demo-build
+        run: docker compose logs
+
+      - name: Publish the demo build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chomagego-demo-build
+          path: build/chomagego-demo-build
+          # Without this the action silently drops dotfiles, and the published
+          # bundle would no longer match what the build script produces.
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Tear down
+        if: always()
+        working-directory: build/chomagego-demo-build
+        run: docker compose down -v
+
+  artifact-check:
+    # Proves the published artifact works, not just the build job's working
+    # directory: this job never checks out the repository sources, it only
+    # downloads what a person would download from the run page.
+    name: Artifact — download, run & verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: demo-build
+    steps:
+      - name: Check out the smoke script only
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/smoke-demo-stack.sh
+          sparse-checkout-cone-mode: false
+
+      - name: Download the published artifact into a clean directory
+        uses: actions/download-artifact@v4
+        with:
+          name: chomagego-demo-build
+          path: downloaded/chomagego-demo-build
+
+      - name: What was downloaded
+        run: |
+          find downloaded -maxdepth 3 -not -path '*/dist/assets/*' | sort
+          du -sh downloaded/chomagego-demo-build
+
+      - name: Start the stack from the downloaded artifact
+        working-directory: downloaded/chomagego-demo-build
+        run: docker compose up -d --build
+
+      - name: The application answers
+        run: |
+          for i in $(seq 1 90); do
+            if curl -sf http://localhost:8080/api/health > /dev/null \
+               && curl -sf http://localhost:8080/ > /dev/null; then
+              curl -s http://localhost:8080/api/health && echo && exit 0
+            fi
+            sleep 2
+          done
+          echo "the downloaded artifact did not become ready in time" >&2
+          exit 1
+
+      - name: Smoke check the downloaded artifact
+        run: ./scripts/smoke-demo-stack.sh http://localhost:8080
+
+      - name: Dump logs on failure
+        if: failure()
+        working-directory: downloaded/chomagego-demo-build
+        run: docker compose logs
+
+      - name: Tear down
+        if: always()
+        working-directory: downloaded/chomagego-demo-build
         run: docker compose down -v

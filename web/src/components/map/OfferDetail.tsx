@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router'
 import { toast } from 'sonner'
 import { ArrowLeftIcon, BuildingIcon, CalendarClockIcon, FlagIcon, MapPinIcon } from 'lucide-react'
+import { ContractBadge } from '@/components/offers/ContractBadge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -37,6 +38,7 @@ export function OfferDetail({ offer, onBack }: OfferDetailProps) {
           <MapPinIcon />
           {offer.city}
         </Badge>
+        <ContractBadge type={offer.contract_type} duration={offer.contract_duration} />
         <Badge variant={remaining <= 5 ? 'destructive' : 'outline'}>
           <CalendarClockIcon />
           {remaining === 0 ? 'Expirée' : `Expire dans ${remaining} j`}

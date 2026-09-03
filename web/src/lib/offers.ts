@@ -6,6 +6,8 @@ export type Offer = {
   company: string
   employer_id: number
   description: string
+  contract_type: string
+  contract_duration: string | null
   city: string
   address: string | null
   created_at: string
@@ -35,23 +37,12 @@ export function listOffers(bounds?: Bounds): Promise<Offer[]> {
   return api<Offer[]>(`/api/offres${query}`)
 }
 
-export type CreateOfferPayload = {
-  title: string
-  company: string
-  description: string
-  address: string
-}
-
-export function createOffer(payload: CreateOfferPayload): Promise<Offer> {
-  return api<Offer>('/api/offres', { method: 'POST', body: JSON.stringify(payload) })
-}
-
 export function daysSince(iso: string): number {
   const elapsed = Date.now() - new Date(iso).getTime()
   return Math.floor(elapsed / 86_400_000)
 }
 
-export function daysLeft(offer: Offer): number {
+export function daysLeft(offer: { created_at: string }): number {
   return Math.max(0, OFFER_LIFETIME_DAYS - daysSince(offer.created_at))
 }
 
@@ -65,6 +56,7 @@ export function publishedLabel(iso: string): string {
 export type OfferFilters = {
   query: string
   city: string
+  contractType: string
   /** 'all', or a number of days since publication. */
   period: string
 }
@@ -80,8 +72,10 @@ export function matchesFilters(offer: Offer, filters: OfferFilters): boolean {
     )
 
   const matchesCity = filters.city === ALL || offer.city === filters.city
+  const matchesContract =
+    filters.contractType === ALL || offer.contract_type === filters.contractType
   const matchesPeriod =
     filters.period === ALL || daysSince(offer.created_at) <= Number(filters.period)
 
-  return matchesText && matchesCity && matchesPeriod
+  return matchesText && matchesCity && matchesContract && matchesPeriod
 }
