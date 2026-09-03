@@ -70,7 +70,7 @@ own_offers=$(curl -sf -b "$employer_jar" "$base/api/mes-offres" | jq 'length')
 ok "$own_offers offers for the demo employer"
 
 echo "==> Publishing an offer is reserved to employers"
-payload='{"title":"Offre de vérification","description":"Publiée par le smoke test.","address":"12 quai de la Fosse, 44000 Nantes"}'
+payload='{"title":"Offre de vérification","description":"Publiée par le smoke test.","contract_type":"cdi","address":"12 quai de la Fosse, 44000 Nantes"}'
 post() {
   curl -s -o /dev/null -w '%{http_code}' "${@:2}" -X POST "$base/api/offres" \
     -H 'content-type: application/json' -d "$payload"

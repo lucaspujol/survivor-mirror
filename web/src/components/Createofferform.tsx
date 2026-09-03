@@ -48,8 +48,6 @@ export function CreateOfferForm({ onCreated }: CreateOfferFormProps) {
       setDescription('');
       setContractType('cdi');
       setContractDuration('');
-      setContractType('cdi');
-      setContractDuration('');
       setAddress('');
       setStatus('idle');
       onCreated?.();

@@ -61,6 +61,8 @@ class EmployerOfferOut(BaseModel):
     id: int
     title: str
     description: str
+    contract_type: str
+    contract_duration: str | None
     city: str
     address: str | None
     location_status: str
