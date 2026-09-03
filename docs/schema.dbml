@@ -1,4 +1,4 @@
-// ChômageGo logical model — https://dbdiagram.io (import: DBML)
+// ChômageGo logical model - https://dbdiagram.io (import: DBML)
 // Source of truth: api/app/models.py + api/migrations/versions/
 
 Project chomagego {
@@ -83,9 +83,9 @@ Table applications {
 }
 
 // Cardinalities
-Ref: jobs.employer_id > employers.user_id              // 1 employer — N offers
-Ref: applications.job_id > jobs.id                     // 1 offer — N applications
-Ref: applications.job_seeker_id > job_seekers.user_id  // 1 job seeker — N applications
+Ref: jobs.employer_id > employers.user_id              // 1 employer - N offers
+Ref: applications.job_id > jobs.id                     // 1 offer - N applications
+Ref: applications.job_seeker_id > job_seekers.user_id  // 1 job seeker - N applications
 
 // Controlled values (CHECK constraints in the database, no native ENUM type)
 Enum user_role {
