@@ -98,3 +98,124 @@ jobs:
       - name: Tear down
         if: always()
         run: docker compose down -v
+
+  demo-build:
+    name: Demo build — bundle, smoke test & artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      BUNDLE: build/chomagego-demo-build
+      DEMO_PASSWORD: 'ChomageGo2026!'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Same major as web/Dockerfile.
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Build the demo bundle
+        run: ./scripts/build-demo-bundle.sh
+
+      - name: The bundle carries a real build output
+        run: |
+          test -f "$BUNDLE/web/dist/index.html"
+          test -f "$BUNDLE/compose.yaml"
+          test -f "$BUNDLE/DEMO.md"
+          test -f "$BUNDLE/BUILD-INFO.txt"
+          test -f "$BUNDLE/api/requirements.txt"
+          test -d "$BUNDLE/api/migrations/versions"
+          # Vite emits hashed bundles: no assets means no build.
+          ls "$BUNDLE"/web/dist/assets/*.js > /dev/null
+          # The compiled page must not still point at the TypeScript entry.
+          ! grep -q '/src/main.tsx' "$BUNDLE/web/dist/index.html"
+
+      - name: Start the demo stack from the bundle
+        working-directory: build/chomagego-demo-build
+        run: docker compose up -d --build
+
+      - name: The application answers
+        run: |
+          for i in $(seq 1 90); do
+            if curl -sf http://localhost:8080/api/health > /dev/null \
+               && curl -sf http://localhost:8080/ > /dev/null; then
+              curl -s http://localhost:8080/api/health && echo && exit 0
+            fi
+            sleep 2
+          done
+          echo "the demo stack did not become ready in time" >&2
+          exit 1
+
+      - name: nginx serves the compiled frontend
+        run: |
+          curl -sf http://localhost:8080/ | grep -q '<div id="root">'
+          asset=$(curl -sf http://localhost:8080/ \
+            | grep -o '/assets/[^"]*\.js' | head -n 1)
+          echo "entry bundle: $asset"
+          curl -sf "http://localhost:8080$asset" > /dev/null
+          # Client-side routes must fall back to index.html, not 404.
+          curl -sf http://localhost:8080/mes-offres | grep -q '<div id="root">'
+
+      - name: Migrations are applied and match the models
+        working-directory: build/chomagego-demo-build
+        run: |
+          docker compose exec -T api alembic current
+          docker compose exec -T api alembic check
+
+      - name: The demo dataset is loaded
+        run: |
+          offers=$(curl -sf http://localhost:8080/api/offres | jq 'length')
+          echo "geolocated offers: $offers"
+          [ "$offers" -ge 12 ] || { echo "the map would be empty" >&2; exit 1; }
+          # Every offer must be placed and carry a company name.
+          curl -sf http://localhost:8080/api/offres \
+            | jq -e 'all(.lat != null and .lng != null and (.company | length) > 0)' > /dev/null
+
+      - name: The seed is idempotent
+        working-directory: build/chomagego-demo-build
+        run: |
+          before=$(curl -sf http://localhost:8080/api/offres | jq 'length')
+          docker compose exec -T api python -m app.seed
+          after=$(curl -sf http://localhost:8080/api/offres | jq 'length')
+          echo "offers before: $before, after a second seed: $after"
+          [ "$before" = "$after" ] || { echo "the seed duplicated rows" >&2; exit 1; }
+
+      - name: Every demo account signs in
+        run: |
+          for role in seeker:candidat employer:employeur admin:admin; do
+            expected="${role%%:*}"
+            login="${role##*:}"
+            jar=$(mktemp)
+            body=$(curl -sf -c "$jar" -X POST http://localhost:8080/api/auth/login \
+              -H 'content-type: application/json' \
+              -d "{\"email\":\"$login@demo.chomagego.example\",\"password\":\"$DEMO_PASSWORD\"}") \
+              || { echo "$login could not sign in" >&2; exit 1; }
+            got=$(echo "$body" | jq -r '.role')
+            name=$(echo "$body" | jq -r '.display_name')
+            echo "$login@demo.chomagego.example -> role=$got, display_name=$name"
+            [ "$got" = "$expected" ] || { echo "expected role $expected" >&2; exit 1; }
+            [ -n "$name" ] && [ "$name" != "null" ] \
+              || { echo "$login has an empty profile" >&2; exit 1; }
+            # The httpOnly cookie must survive the nginx proxy.
+            curl -sf -b "$jar" http://localhost:8080/api/auth/me | jq -e '.role' > /dev/null
+          done
+
+      - name: Dump logs on failure
+        if: failure()
+        working-directory: build/chomagego-demo-build
+        run: docker compose logs
+
+      - name: Publish the demo build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chomagego-demo-build
+          path: build/chomagego-demo-build
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Tear down
+        if: always()
+        working-directory: build/chomagego-demo-build
+        run: docker compose down -v

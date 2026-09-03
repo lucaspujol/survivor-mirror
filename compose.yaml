@@ -20,7 +20,9 @@ services:
 
   api:
     build: ./api
-    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    # Migrations, then the demo dataset, then the server. The seed is
+    # idempotent: restarting the stack never duplicates anything.
+    command: sh -c "alembic upgrade head && python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-chomagego}:${POSTGRES_PASSWORD:-chomagego}@db:5432/${POSTGRES_DB:-chomagego}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
