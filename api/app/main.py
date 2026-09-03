@@ -74,6 +74,8 @@ class JobOffer(BaseModel):
     id: int
     title: str
     company: str
+    description: str
+    city: str
     lat: float
     lng: float
     geocoding_source: str | None
@@ -91,6 +93,8 @@ def job_to_offer(job: Job) -> JobOffer:
         id=job.id,
         title=job.title,
         company=job.employer.company_name,
+        description=job.description,
+        city=job.location_city,
         lat=point.y,
         lng=point.x,
         geocoding_source=job.geocoding_source,
@@ -185,3 +189,50 @@ def create_offer(payload: OfferCreate, session: Session = Depends(get_session)) 
     session.refresh(job, attribute_names=["employer"])
 
     return job_to_offer(job)
+
+class OfferUpdate(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    address: str | None = None
+
+def get_job_or_404(session: Session, offer_id: int) -> Job:
+    job = session.get(Job, offer_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail=f"Offre {offer_id} introuvable.")
+    return job
+
+@app.patch("/api/offres/{offer_id}", response_model=JobOffer)
+def update_offer(
+    offer_id: int, payload: OfferUpdate, session: Session = Depends(get_session)
+) -> JobOffer:
+    job = get_job_or_404(session, offer_id)
+
+    if payload.title is not None:
+        job.title = payload.title
+    if payload.description is not None:
+        job.description = payload.description
+
+    if payload.address is not None:
+        try:
+            geo = geocode_address(payload.address)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+        job.location_address = payload.address
+        job.location_city = geo.city or "Ville inconnue"
+        job.location = from_shape(Point(geo.lng, geo.lat), srid=4326)
+        job.geocoding_source = geo.source
+        job.geocoding_score = geo.score
+        job.geocoded_at = datetime.now(timezone.utc)
+        job.location_status = "geocoded"
+
+    session.commit()
+    session.refresh(job, attribute_names=["employer"])
+
+    return job_to_offer(job)
+
+@app.delete("/api/offres/{offer_id}", status_code=204)
+def delete_offer(offer_id: int, session: Session = Depends(get_session)) -> None:
+    job = get_job_or_404(session, offer_id)
+    session.delete(job)
+    session.commit()

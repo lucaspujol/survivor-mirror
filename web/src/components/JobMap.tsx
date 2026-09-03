@@ -25,6 +25,8 @@ interface JobOffer {
   id: number;
   title: string;
   company: string;
+  description: string;
+  city: string;
   lat: number;
   lng: number;
 }
@@ -189,7 +191,8 @@ export function JobMap({ refreshSignal }: JobMapProps) {
               <Popup>
                 <strong>{offer.title}</strong>
                 <br />
-                {offer.company}
+                <span>{offer.company} - {offer.city}</span>
+                <p style={{ marginTop: 4, marginBottom: 0 }}>{offer.description}</p>
               </Popup>
             </Marker>
           ))}
