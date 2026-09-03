@@ -1,21 +1,5 @@
-import { useState } from 'react';
-import { JobMap } from '@/components/JobMap';
-import { CreateOfferForm } from '@/components/Createofferform';
+import { MapWorkspace } from '@/components/map/MapWorkspace'
 
 export function HomePage() {
-  const [refreshSignal, setRefreshSignal] = useState(0);
-
-  return (
-    <div>
-      <h1 className="text-2xl font-semibold">Offres d'emploi</h1>
-      <p className="text-muted-foreground mt-2">
-        Explorez les offres disponibles près de chez vous
-      </p>
-
-      <div className="mt-6">
-        <JobMap refreshSignal={refreshSignal} />
-        <CreateOfferForm onCreated={() => setRefreshSignal((n) => n + 1)} />
-      </div>
-    </div>
-  )
+  return <MapWorkspace />
 }
