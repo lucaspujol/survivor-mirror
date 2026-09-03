@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -10,23 +11,33 @@ import {
   FieldLabel,
 } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { SignupIdentityFields } from '@/components/signup-identity-fields'
 import { useAuthSubmit } from '@/hooks/use-auth-submit'
 import { useAuth, type RegisterPayload } from '@/lib/auth'
 
 export function SignupForm({ className, ...props }: React.ComponentProps<'div'>) {
   const { register } = useAuth()
   const { error, isPending, submit } = useAuthSubmit('Inscription impossible')
+  const [role, setRole] = useState<RegisterPayload['role']>('seeker')
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
+    const credentials = {
+      email: String(data.get('email')),
+      password: String(data.get('password')),
+    }
     void submit(() =>
-      register({
-        email: String(data.get('email')),
-        fullname: String(data.get('fullname')),
-        password: String(data.get('password')),
-        role: data.get('role') as RegisterPayload['role'],
-      }),
+      register(
+        role === 'employer'
+          ? { role, ...credentials, company_name: String(data.get('company_name')) }
+          : {
+              role,
+              ...credentials,
+              first_name: String(data.get('first_name')),
+              last_name: String(data.get('last_name')),
+            },
+      ),
     )
   }
 
@@ -43,24 +54,22 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
                 </p>
               </div>
               <Field>
-                <FieldLabel htmlFor="fullname">Nom complet</FieldLabel>
-                <Input id="fullname" name="fullname" autoComplete="name" required />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="email">Email</FieldLabel>
-                <Input id="email" name="email" type="email" autoComplete="email" required />
-              </Field>
-              <Field>
                 <FieldLabel htmlFor="role">Je suis</FieldLabel>
                 <select
                   id="role"
                   name="role"
-                  defaultValue="seeker"
+                  value={role}
+                  onChange={(event) => setRole(event.target.value as RegisterPayload['role'])}
                   className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
                 >
                   <option value="seeker">candidat</option>
                   <option value="employer">employeur</option>
                 </select>
+              </Field>
+              <SignupIdentityFields role={role} />
+              <Field>
+                <FieldLabel htmlFor="email">Email</FieldLabel>
+                <Input id="email" name="email" type="email" autoComplete="email" required />
               </Field>
               <Field>
                 <FieldLabel htmlFor="password">Mot de passe</FieldLabel>

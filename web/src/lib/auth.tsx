@@ -6,18 +6,16 @@ export type Role = 'seeker' | 'employer' | 'admin'
 export type User = {
   id: number
   email: string
-  fullname: string
   role: Role
+  /** Full name of a seeker, company name of an employer. */
+  display_name: string
   created_at: string
 }
 
 /** Admin is granted in the database, never chosen at signup. */
-export type RegisterPayload = {
-  email: string
-  fullname: string
-  password: string
-  role: 'seeker' | 'employer'
-}
+export type RegisterPayload =
+  | { role: 'seeker'; email: string; password: string; first_name: string; last_name: string }
+  | { role: 'employer'; email: string; password: string; company_name: string }
 
 type AuthContextValue = {
   user: User | null

@@ -18,8 +18,8 @@ import {
 import { useAuth, type User } from '@/lib/auth'
 import { BadgeCheckIcon, ChevronsUpDownIcon, LogInIcon, LogOutIcon } from 'lucide-react'
 
-function initials(fullname: string) {
-  return fullname
+function initials(name: string) {
+  return name
     .split(' ')
     .map((part) => part[0] ?? '')
     .slice(0, 2)
@@ -52,10 +52,10 @@ export function NavUser({ user }: { user: User | null }) {
             render={<SidebarMenuButton size="lg" className="aria-expanded:bg-muted" />}
           >
             <Avatar>
-              <AvatarFallback>{initials(user.fullname)}</AvatarFallback>
+              <AvatarFallback>{initials(user.display_name)}</AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-medium">{user.fullname}</span>
+              <span className="truncate font-medium">{user.display_name}</span>
               <span className="truncate text-xs">{user.email}</span>
             </div>
             <ChevronsUpDownIcon className="ml-auto size-4" />
@@ -70,10 +70,10 @@ export function NavUser({ user }: { user: User | null }) {
               <DropdownMenuLabel className="p-0 font-normal">
                 <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                   <Avatar>
-                    <AvatarFallback>{initials(user.fullname)}</AvatarFallback>
+                    <AvatarFallback>{initials(user.display_name)}</AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">{user.fullname}</span>
+                    <span className="truncate font-medium">{user.display_name}</span>
                     <span className="truncate text-xs">{user.email}</span>
                   </div>
                 </div>

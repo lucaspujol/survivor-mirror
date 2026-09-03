@@ -18,7 +18,7 @@ export function AccountPage() {
       <dl className="grid gap-2 text-sm">
         <div className="flex gap-2">
           <dt className="w-32 text-muted-foreground">Nom</dt>
-          <dd>{user.fullname}</dd>
+          <dd>{user.display_name}</dd>
         </div>
         <div className="flex gap-2">
           <dt className="w-32 text-muted-foreground">Email</dt>
