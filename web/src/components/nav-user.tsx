@@ -15,11 +15,11 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar'
-import type { User } from '@/lib/auth'
+import { useAuth, type User } from '@/lib/auth'
 import { BadgeCheckIcon, ChevronsUpDownIcon, LogInIcon, LogOutIcon } from 'lucide-react'
 
-function initials(fullname: string) {
-  return fullname
+function initials(name: string) {
+  return name
     .split(' ')
     .map((part) => part[0] ?? '')
     .slice(0, 2)
@@ -29,6 +29,7 @@ function initials(fullname: string) {
 
 export function NavUser({ user }: { user: User | null }) {
   const { isMobile } = useSidebar()
+  const { logout } = useAuth()
 
   if (!user) {
     return (
@@ -51,10 +52,10 @@ export function NavUser({ user }: { user: User | null }) {
             render={<SidebarMenuButton size="lg" className="aria-expanded:bg-muted" />}
           >
             <Avatar>
-              <AvatarFallback>{initials(user.fullname)}</AvatarFallback>
+              <AvatarFallback>{initials(user.display_name)}</AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-medium">{user.fullname}</span>
+              <span className="truncate font-medium">{user.display_name}</span>
               <span className="truncate text-xs">{user.email}</span>
             </div>
             <ChevronsUpDownIcon className="ml-auto size-4" />
@@ -65,26 +66,28 @@ export function NavUser({ user }: { user: User | null }) {
             align="end"
             sideOffset={4}
           >
-            <DropdownMenuLabel className="p-0 font-normal">
-              <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar>
-                  <AvatarFallback>{initials(user.fullname)}</AvatarFallback>
-                </Avatar>
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.fullname}</span>
-                  <span className="truncate text-xs">{user.email}</span>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="p-0 font-normal">
+                <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+                  <Avatar>
+                    <AvatarFallback>{initials(user.display_name)}</AvatarFallback>
+                  </Avatar>
+                  <div className="grid flex-1 text-left text-sm leading-tight">
+                    <span className="truncate font-medium">{user.display_name}</span>
+                    <span className="truncate text-xs">{user.email}</span>
+                  </div>
                 </div>
-              </div>
-            </DropdownMenuLabel>
+              </DropdownMenuLabel>
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem render={<Link to="/compte" />}>
+              <DropdownMenuItem render={<Link to="/me" />}>
                 <BadgeCheckIcon />
                 Mon compte
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => void logout()}>
               <LogOutIcon />
               Se déconnecter
             </DropdownMenuItem>

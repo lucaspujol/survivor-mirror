@@ -13,6 +13,8 @@ from sqlalchemy.orm import Session, joinedload
 from app.db import get_session
 from app.models import Employer, Job, User
 
+from app.routers import auth
+
 app = FastAPI(
     title="ChômageGo API",
     version="0.1.0",
@@ -26,6 +28,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth.router)
 
 @app.get("/api/health")
 def health() -> dict[str, str]:

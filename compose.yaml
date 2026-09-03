@@ -23,6 +23,9 @@ services:
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-chomagego}:${POSTGRES_PASSWORD:-chomagego}@db:5432/${POSTGRES_DB:-chomagego}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      JWT_EXPIRE_DAYS: ${JWT_EXPIRE_DAYS:-7}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
     volumes:
       - ./api:/app
     ports:
