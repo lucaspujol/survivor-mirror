@@ -131,40 +131,6 @@ export function CreateOfferForm({ onCreated }: CreateOfferFormProps) {
       )}
 
       <div className="flex flex-col gap-1">
-        <label htmlFor="contractType" className="text-sm font-medium">
-          Type de contrat
-        </label>
-        <select
-          id="contractType"
-          value={contractType}
-          onChange={(e) => setContractType(e.target.value)}
-          className="rounded-md border px-3 py-2 text-sm"
-        >
-          {CONTRACT_TYPES.map((type) => (
-            <option key={type.value} value={type.value}>
-              {type.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {selectedContractType?.hasDuration && (
-        <div className="flex flex-col gap-1">
-          <label htmlFor="contractDuration" className="text-sm font-medium">
-            Durée
-          </label>
-          <input
-            id="contractDuration"
-            value={contractDuration}
-            onChange={(e) => setContractDuration(e.target.value)}
-            placeholder="ex: 3 mois, 6 mois, 1 an"
-            required
-            className="rounded-md border px-3 py-2 text-sm"
-          />
-        </div>
-      )}
-
-      <div className="flex flex-col gap-1">
         <label htmlFor="address" className="text-sm font-medium">
           Adresse
         </label>
