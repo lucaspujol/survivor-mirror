@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { AddressAutocomplete } from '@/components/AdressAutocomplete';
+import { AddressAutocomplete } from '@/components/AddressAutocomplete';
 
 interface CreateOfferFormProps {
   onCreated?: () => void;
