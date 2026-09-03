@@ -40,3 +40,43 @@ class UserOut(BaseModel):
     # tables hold the names, the users table only authenticates.
     display_name: str
     created_at: datetime
+
+
+class SeekerApplicationOut(BaseModel):
+    """One row of the job seeker's applications screen."""
+
+    id: int
+    job_id: int
+    job_title: str
+    company: str
+    city: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class EmployerOfferOut(BaseModel):
+    """One row of the employer's offers screen."""
+
+    id: int
+    title: str
+    description: str
+    city: str
+    address: str | None
+    location_status: str
+    application_count: int
+    created_at: datetime
+
+
+class AdminUserOut(BaseModel):
+    """One row of the administrator's accounts screen."""
+
+    id: int
+    email: EmailStr
+    role: str
+    display_name: str
+    # Employers only; None for the other roles.
+    activity_verified: bool | None
+    offer_count: int
+    application_count: int
+    created_at: datetime

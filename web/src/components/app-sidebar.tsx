@@ -10,23 +10,20 @@ import {
   SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar'
-import { useAuth } from '@/lib/auth'
-import {
-  BriefcaseIcon,
-  FileTextIcon,
-  FlagIcon,
-  MapIcon,
-  UsersIcon,
-} from 'lucide-react'
+import { useAuth, type Role } from '@/lib/auth'
+import { BriefcaseIcon, FileTextIcon, MapIcon, UsersIcon } from 'lucide-react'
 
-const mainItems: NavItem[] = [
-  { title: 'Carte', url: '/', icon: <MapIcon /> },
-  { title: 'Mes candidatures', url: '/candidatures', icon: <FileTextIcon /> },
-  { title: 'Mes offres', url: '/mes-offres', icon: <BriefcaseIcon /> },
-]
+const mapItem: NavItem = { title: 'Carte', url: '/', icon: <MapIcon /> }
+
+// Only what the role can actually open: an entry that would land on a 404 or
+// on a screen the API refuses is worse than no entry at all.
+const roleItems: Record<Role, NavItem[]> = {
+  seeker: [{ title: 'Mes candidatures', url: '/candidatures', icon: <FileTextIcon /> }],
+  employer: [{ title: 'Mes offres', url: '/mes-offres', icon: <BriefcaseIcon /> }],
+  admin: [],
+}
 
 const adminItems: NavItem[] = [
-  { title: 'Signalements', url: '/admin/signalements', icon: <FlagIcon /> },
   { title: 'Utilisateurs', url: '/admin/utilisateurs', icon: <UsersIcon /> },
 ]
 
@@ -104,7 +101,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </Link>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain label="Navigation" items={mainItems} />
+        <NavMain
+          label="Navigation"
+          items={[mapItem, ...(user ? roleItems[user.role] : [])]}
+        />
         {user?.role === 'admin' && <NavMain label="Administration" items={adminItems} />}
       </SidebarContent>
       <SidebarFooter>

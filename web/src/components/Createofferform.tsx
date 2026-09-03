@@ -7,7 +7,6 @@ interface CreateOfferFormProps {
 
 export function CreateOfferForm({ onCreated }: CreateOfferFormProps) {
   const [title, setTitle] = useState('');
-  const [company, setCompany] = useState('');
   const [description, setDescription] = useState('');
   const [address, setAddress] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -25,7 +24,9 @@ export function CreateOfferForm({ onCreated }: CreateOfferFormProps) {
       const response = await fetch('/api/offres', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, company, description, address }),
+        // The company is not sent: the API attaches the offer to the
+        // employer whose session publishes it.
+        body: JSON.stringify({ title, description, address }),
       });
 
       if (!response.ok) {
@@ -34,7 +35,6 @@ export function CreateOfferForm({ onCreated }: CreateOfferFormProps) {
       }
 
       setTitle('');
-      setCompany('');
       setDescription('');
       setAddress('');
       setStatus('idle');
@@ -63,19 +63,6 @@ export function CreateOfferForm({ onCreated }: CreateOfferFormProps) {
           id="title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          required
-          className="rounded-md border px-3 py-2 text-sm"
-        />
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <label htmlFor="company" className="text-sm font-medium">
-          Entreprise
-        </label>
-        <input
-          id="company"
-          value={company}
-          onChange={(e) => setCompany(e.target.value)}
           required
           className="rounded-md border px-3 py-2 text-sm"
         />

@@ -58,17 +58,26 @@ it cannot be registered and no mail can ever reach it.
 
 1. Open http://localhost:8080 — the map shows the seeded offers across France,
    clustered; zooming refetches only the visible bounds.
-2. Click a marker: the popup gives the job title and the company.
-3. Sign in as `employeur@demo.chomagego.example` — the sidebar shows the
-   employer navigation and *Mon compte* displays *Numérique Océan*.
-4. Publish an offer from the home page form. The address field autocompletes
-   through the government Adresse API, so this step needs internet access;
-   the new marker appears on the map without a reload.
-5. Sign in as `admin@demo.chomagego.example` — the *Administration* section
-   (*Signalements*, *Utilisateurs*) appears in the sidebar; it is reachable
-   only with this role.
-6. Sign in as `candidat@demo.chomagego.example` — *Mon compte* shows
-   *Camille Fontaine*, who already has three applications in the database.
+2. Click a marker: the popup gives the job title and the company. Signed out,
+   the page invites you to sign in as an employer to publish.
+3. Sign in as `candidat@demo.chomagego.example` — the sidebar shows
+   *Mes candidatures*, listing Camille Fontaine's three applications with the
+   offer, the company, the city, the status and the dates.
+4. Sign in as `employeur@demo.chomagego.example` — the sidebar shows
+   *Mes offres*, listing the two offers of *Numérique Océan* and the
+   applications each has received. The publish form appears under the map.
+5. Publish an offer from that form. The address field autocompletes through
+   the government Adresse API, so this step needs internet access; the offer
+   is attached to the signed-in employer and the new marker appears without a
+   reload.
+6. Sign in as `admin@demo.chomagego.example` — the *Administration* section
+   appears with *Utilisateurs*, the read-only list of the 15 accounts, their
+   role and their activity.
+
+Every section is restricted to the role that owns it, in the interface **and**
+in the API: an address that a role cannot open shows the 404 page, and the
+matching endpoint answers 401 signed out or 403 with the wrong role. Only an
+employer can publish an offer.
 
 ## Dataset
 

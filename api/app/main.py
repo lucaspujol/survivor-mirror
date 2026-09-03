@@ -11,9 +11,10 @@ from shapely.geometry import Point
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 from app.db import get_session
-from app.models import Employer, Job, User
+from app.deps import CurrentAdmin, CurrentEmployer
+from app.models import Employer, Job
 
-from app.routers import auth
+from app.routers import auth, dashboard
 
 app = FastAPI(
     title="ChômageGo API",
@@ -30,6 +31,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(dashboard.router)
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
@@ -124,7 +126,9 @@ def list_offers(
     return [job_to_offer(job) for job in jobs]
 
 @app.get("/api/admin/offres", response_model=list[AdminJobOffer])
-def list_offers_admin(session: Session = Depends(get_session)) -> list[AdminJobOffer]:
+def list_offers_admin(
+    _admin: CurrentAdmin, session: Session = Depends(get_session)
+) -> list[AdminJobOffer]:
     query = select(Job).options(joinedload(Job.employer)).where(Job.location.isnot(None))
     jobs = session.execute(query).scalars().all()
 
@@ -136,41 +140,29 @@ def list_offers_admin(session: Session = Depends(get_session)) -> list[AdminJobO
     return result
 
 class OfferCreate(BaseModel):
+    """The company is not part of the payload: an offer belongs to the
+    employer whose session publishes it."""
+
     title: str
-    company: str
     description: str
     address: str
 
-def slugify_email(company: str) -> str:
-    slug = "".join(c.lower() if c.isalnum() else "-" for c in company).strip("-")
-    return f"contact@{slug}.seed.local"
-
-def get_or_create_employer(session: Session, company_name: str) -> Employer:
-    existing = session.query(Employer).filter(Employer.company_name == company_name).first()
-    if existing:
-        return existing
-
-    user = User(
-        email=slugify_email(company_name),
-        password_hash="not-a-real-password",
-        role="employer",
-    )
-    session.add(user)
-    session.flush()
-
-    employer = Employer(user_id=user.id, company_name=company_name, activity_verified=True)
-    session.add(employer)
-    session.flush()
-    return employer
-
 @app.post("/api/offres", response_model=JobOffer, status_code=201)
-def create_offer(payload: OfferCreate, session: Session = Depends(get_session)) -> JobOffer:
+def create_offer(
+    payload: OfferCreate,
+    user: CurrentEmployer,
+    session: Session = Depends(get_session),
+) -> JobOffer:
+    employer = session.get(Employer, user.id)
+    if employer is None:
+        # An employer account always carries its profile row; a missing one
+        # means the account is broken, not that the request is wrong.
+        raise HTTPException(status_code=500, detail="Employer profile is missing")
+
     try:
         geo = geocode_address(payload.address)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
-
-    employer = get_or_create_employer(session, payload.company)
 
     job = Job(
         employer_id=employer.user_id,
