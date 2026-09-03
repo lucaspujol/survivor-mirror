@@ -7,12 +7,9 @@ export function RequireAuth() {
 
   if (isLoading) return null
 
-  // if (!user) {
-  //   return <Navigate to="/login" state={{ from: location }} replace />
-  // }
-
-  void user
-  void location
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />
+  }
 
   return <Outlet />
 }
