@@ -31,7 +31,6 @@ export function CreateOfferForm({ onCreated }: CreateOfferFormProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title,
-          company,
           description,
           contract_type: contractType,
           contract_duration: selectedContractType?.hasDuration ? contractDuration : null,
