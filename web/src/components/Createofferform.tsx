@@ -11,13 +11,9 @@ export function CreateOfferForm({ onCreated }: CreateOfferFormProps) {
   const [description, setDescription] = useState('');
   const [contractType, setContractType] = useState('cdi');
   const [contractDuration, setContractDuration] = useState('');
-  const [contractType, setContractType] = useState('cdi');
-  const [contractDuration, setContractDuration] = useState('');
   const [address, setAddress] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
-
-  const selectedContractType = CONTRACT_TYPES.find((c) => c.value === contractType);
 
   const selectedContractType = CONTRACT_TYPES.find((c) => c.value === contractType);
 
