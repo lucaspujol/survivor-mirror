@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from pyproj import Transformer
 
+from app.routers import auth
+
 app = FastAPI(
     title="ChômageGo API",
     version="0.1.0",
@@ -18,6 +20,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth.router)
 
 @app.get("/api/health")
 def health() -> dict[str, str]:

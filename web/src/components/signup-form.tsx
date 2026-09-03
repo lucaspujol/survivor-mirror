@@ -5,17 +5,36 @@ import { Card, CardContent } from '@/components/ui/card'
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
 } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { useAuthSubmit } from '@/hooks/use-auth-submit'
+import { useAuth, type RegisterPayload } from '@/lib/auth'
 
 export function SignupForm({ className, ...props }: React.ComponentProps<'div'>) {
+  const { register } = useAuth()
+  const { error, isPending, submit } = useAuthSubmit('Inscription impossible')
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const data = new FormData(event.currentTarget)
+    void submit(() =>
+      register({
+        email: String(data.get('email')),
+        fullname: String(data.get('fullname')),
+        password: String(data.get('password')),
+        role: data.get('role') as RegisterPayload['role'],
+      }),
+    )
+  }
+
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card className="overflow-hidden p-0">
         <CardContent className="grid p-0 md:grid-cols-2">
-          <form className="p-6 md:p-8">
+          <form className="p-6 md:p-8" onSubmit={handleSubmit}>
             <FieldGroup>
               <div className="flex flex-col items-center gap-2 text-center">
                 <h1 className="text-2xl font-bold">Créer un compte</h1>
@@ -55,8 +74,11 @@ export function SignupForm({ className, ...props }: React.ComponentProps<'div'>)
                 />
                 <FieldDescription>8 caractères minimum.</FieldDescription>
               </Field>
+              <FieldError>{error}</FieldError>
               <Field>
-                <Button type="submit">Créer mon compte</Button>
+                <Button type="submit" disabled={isPending}>
+                  {isPending ? 'Création…' : 'Créer mon compte'}
+                </Button>
               </Field>
               <FieldDescription className="text-center">
                 Déjà inscrit ? <Link to="/login">Se connecter</Link>
