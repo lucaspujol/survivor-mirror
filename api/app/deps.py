@@ -32,3 +32,26 @@ def get_current_user(
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+def require_role(*roles: str):
+    """Dependency factory: allow the request only for those roles.
+
+    401 when signed out, 403 when signed in with the wrong role, so the
+    frontend can tell "log in" from "not for you".
+    """
+
+    def dependency(user: CurrentUser) -> User:
+        if user.role not in roles:
+            raise HTTPException(
+                status.HTTP_403_FORBIDDEN,
+                "This action is not available for your account",
+            )
+        return user
+
+    return dependency
+
+
+CurrentSeeker = Annotated[User, Depends(require_role("seeker"))]
+CurrentEmployer = Annotated[User, Depends(require_role("employer"))]
+CurrentAdmin = Annotated[User, Depends(require_role("admin"))]
