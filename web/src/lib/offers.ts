@@ -54,28 +54,81 @@ export function publishedLabel(iso: string): string {
 }
 
 export type OfferFilters = {
+  /** Free text matched against the title, the company and the description. */
   query: string
-  city: string
-  contractType: string
-  /** 'all', or a number of days since publication. */
-  period: string
+  /** Free text matched against the city and the address. */
+  location: string
+  /** Selected contract types; empty means no restriction. */
+  contractTypes: string[]
+  /** Selected windows, in days since publication; empty means no restriction. */
+  periods: string[]
 }
 
-export const ALL = 'all'
+export const EMPTY_FILTERS: OfferFilters = {
+  query: '',
+  location: '',
+  contractTypes: [],
+  periods: [],
+}
+
+export const PERIODS = [
+  { value: '1', label: "Publiées aujourd'hui" },
+  { value: '7', label: '7 derniers jours' },
+  { value: '30', label: '30 derniers jours' },
+]
+
+function matchesQuery(offer: Offer, query: string): boolean {
+  const needle = query.trim().toLowerCase()
+  if (!needle) return true
+  return [offer.title, offer.company, offer.description].some((field) =>
+    field.toLowerCase().includes(needle),
+  )
+}
+
+function matchesLocation(offer: Offer, location: string): boolean {
+  const needle = location.trim().toLowerCase()
+  if (!needle) return true
+  return [offer.city, offer.address ?? ''].some((field) =>
+    field.toLowerCase().includes(needle),
+  )
+}
+
+function matchesPeriods(offer: Offer, periods: string[]): boolean {
+  if (periods.length === 0) return true
+  return periods.some((days) => daysSince(offer.created_at) <= Number(days))
+}
 
 export function matchesFilters(offer: Offer, filters: OfferFilters): boolean {
-  const needle = filters.query.trim().toLowerCase()
-  const matchesText =
-    !needle ||
-    [offer.title, offer.company, offer.city].some((field) =>
-      field.toLowerCase().includes(needle),
-    )
+  return (
+    matchesQuery(offer, filters.query) &&
+    matchesLocation(offer, filters.location) &&
+    (filters.contractTypes.length === 0 ||
+      filters.contractTypes.includes(offer.contract_type)) &&
+    matchesPeriods(offer, filters.periods)
+  )
+}
 
-  const matchesCity = filters.city === ALL || offer.city === filters.city
-  const matchesContract =
-    filters.contractType === ALL || offer.contract_type === filters.contractType
-  const matchesPeriod =
-    filters.period === ALL || daysSince(offer.created_at) <= Number(filters.period)
+/**
+ * Offers left once every filter *except* `facet` is applied. Counting against
+ * that subset is what keeps a facet's numbers meaningful: they say how many
+ * results ticking the box would add, instead of collapsing to zero as soon as
+ * a sibling box in the same section is ticked.
+ */
+export function facetPool(
+  offers: Offer[],
+  filters: OfferFilters,
+  facet: keyof OfferFilters,
+): Offer[] {
+  const relaxed = { ...filters, [facet]: EMPTY_FILTERS[facet] }
+  return offers.filter((offer) => matchesFilters(offer, relaxed))
+}
 
-  return matchesText && matchesCity && matchesContract && matchesPeriod
+export type SortKey = 'recent' | 'oldest' | 'city'
+
+export function sortOffers(offers: Offer[], sort: SortKey): Offer[] {
+  const byDate = (offer: Offer) => new Date(offer.created_at).getTime()
+  return [...offers].sort((a, b) => {
+    if (sort === 'city') return a.city.localeCompare(b.city)
+    return sort === 'oldest' ? byDate(a) - byDate(b) : byDate(b) - byDate(a)
+  })
 }
