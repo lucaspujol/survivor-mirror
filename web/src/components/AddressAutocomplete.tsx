@@ -9,13 +9,14 @@ interface AddressSuggestion {
 interface AddressAutocompleteProps {
   value: string;
   onChange: (value: string) => void;
+  onSelect?: (label: string, coords: { lat: number; lng: number }) => void;
   id?: string;
 }
 
 const DEBOUNCE_MS = 250;
 const MIN_QUERY_LENGTH = 3;
 
-export function AddressAutocomplete({ value, onChange, id = 'address' }: AddressAutocompleteProps) {
+export function AddressAutocomplete({ value, onChange, onSelect, id = 'address' }: AddressAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -67,6 +68,7 @@ export function AddressAutocomplete({ value, onChange, id = 'address' }: Address
 
   const selectSuggestion = (suggestion: AddressSuggestion) => {
     onChange(suggestion.label);
+    onSelect?.(suggestion.label, { lat: suggestion.lat, lng: suggestion.lng });
     setSuggestions([]);
     setIsOpen(false);
   };
