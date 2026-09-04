@@ -1,11 +1,12 @@
-import { useEffect, useRef } from 'react'
-import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet'
+import { useEffect, useRef, useState } from 'react'
+import { MapContainer, Marker, TileLayer, ZoomControl, useMap, useMapEvents } from 'react-leaflet'
 import MarkerClusterGroup from 'react-leaflet-cluster'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.markercluster/dist/MarkerCluster.css'
 import '@/components/map/leaflet-theme.css'
 import { clusterIcon, offerIcon, selectedOfferIcon } from '@/components/map/markers'
+import { LocateControl } from '@/components/Locatecontrol'
 import type { Bounds, Offer } from '@/lib/offers'
 
 const DEFAULT_CENTER: [number, number] = [46.6, 2.5]
@@ -67,6 +68,17 @@ function FocusOffer({ offer }: { offer: Offer | null }) {
   return null
 }
 
+/** Hands the map instance to the overlays rendered outside the container. */
+function MapReady({ onReady }: { onReady: (map: L.Map) => void }) {
+  const map = useMap()
+
+  useEffect(() => {
+    onReady(map)
+  }, [map, onReady])
+
+  return null
+}
+
 type JobMapProps = {
   offers: Offer[]
   selected: Offer | null
@@ -75,40 +87,51 @@ type JobMapProps = {
 }
 
 export function JobMap({ offers, selected, onSelect, onBoundsChange }: JobMapProps) {
+  const [map, setMap] = useState<L.Map | null>(null)
+
   return (
-    <MapContainer
-      center={DEFAULT_CENTER}
-      zoom={DEFAULT_ZOOM}
-      minZoom={2}
-      maxBounds={WORLD_BOUNDS}
-      maxBoundsViscosity={0.8}
-      className="h-full w-full"
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.ign.fr/">IGN</a> — Géoplateforme'
-        url="https://data.geopf.fr/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png"
-        maxZoom={19}
-      />
-
-      <BoundsWatcher onChange={onBoundsChange} />
-      <FocusOffer offer={selected} />
-
-      <MarkerClusterGroup
-        chunkedLoading
-        showCoverageOnHover={false}
-        maxClusterRadius={(zoom: number) => (zoom < 8 ? 100 : 40)}
-        iconCreateFunction={clusterIcon}
+    <div className="relative h-full w-full">
+      <MapContainer
+        center={DEFAULT_CENTER}
+        zoom={DEFAULT_ZOOM}
+        minZoom={2}
+        maxBounds={WORLD_BOUNDS}
+        maxBoundsViscosity={0.8}
+        zoomControl={false}
+        className="h-full w-full"
       >
-        {offers.map((offer) => (
-          <Marker
-            key={offer.id}
-            position={[offer.lat, offer.lng]}
-            icon={offer.id === selected?.id ? selectedOfferIcon : offerIcon}
-            zIndexOffset={offer.id === selected?.id ? 1000 : 0}
-            eventHandlers={{ click: () => onSelect(offer) }}
-          />
-        ))}
-      </MarkerClusterGroup>
-    </MapContainer>
+        {/* Top left is taken by the locate panel. */}
+        <ZoomControl position="topright" />
+
+        <TileLayer
+          attribution='&copy; <a href="https://www.ign.fr/">IGN</a> — Géoplateforme'
+          url="https://data.geopf.fr/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png"
+          maxZoom={19}
+        />
+
+        <MapReady onReady={setMap} />
+        <BoundsWatcher onChange={onBoundsChange} />
+        <FocusOffer offer={selected} />
+
+        <MarkerClusterGroup
+          chunkedLoading
+          showCoverageOnHover={false}
+          maxClusterRadius={(zoom: number) => (zoom < 8 ? 100 : 40)}
+          iconCreateFunction={clusterIcon}
+        >
+          {offers.map((offer) => (
+            <Marker
+              key={offer.id}
+              position={[offer.lat, offer.lng]}
+              icon={offer.id === selected?.id ? selectedOfferIcon : offerIcon}
+              zIndexOffset={offer.id === selected?.id ? 1000 : 0}
+              eventHandlers={{ click: () => onSelect(offer) }}
+            />
+          ))}
+        </MarkerClusterGroup>
+      </MapContainer>
+
+      <LocateControl map={map} />
+    </div>
   )
 }
