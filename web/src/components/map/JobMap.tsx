@@ -90,7 +90,7 @@ export function JobMap({ offers, selected, onSelect, onBoundsChange }: JobMapPro
   const [map, setMap] = useState<L.Map | null>(null)
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative isolate h-full w-full">
       <MapContainer
         center={DEFAULT_CENTER}
         zoom={DEFAULT_ZOOM}
