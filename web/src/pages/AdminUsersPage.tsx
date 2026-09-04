@@ -1,4 +1,5 @@
 import { PageEmpty, PageError, PageLoading } from '@/components/PageState'
+import { PageShell } from '@/components/layout/PageShell'
 import { useApiResource } from '@/hooks/use-api-resource'
 
 type AdminUser = {
@@ -28,14 +29,11 @@ export function AdminUsersPage() {
   const { status, data, error } = useApiResource<AdminUser[]>('/api/admin/utilisateurs')
 
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Utilisateurs</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Consultation des comptes de la plateforme. Cet écran est en lecture seule.
-        </p>
-      </div>
-
+    <PageShell
+      title="Utilisateurs"
+      description="Consultation des comptes de la plateforme. Cet écran est en lecture seule."
+    >
+      <div className="flex flex-col gap-4">
       {status === 'loading' && <PageLoading rows={4} />}
       {status === 'error' && <PageError message={error} />}
 
@@ -85,6 +83,7 @@ export function AdminUsersPage() {
             </div>
           </>
         ))}
-    </div>
+      </div>
+    </PageShell>
   )
 }

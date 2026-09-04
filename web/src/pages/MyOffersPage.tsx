@@ -4,6 +4,7 @@ import { AddressAutocomplete } from '@/components/AddressAutocomplete';
 import { CONTRACT_TYPES } from '@/components/contractTypes';
 import { PageEmpty, PageError, PageLoading } from '@/components/PageState';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageShell } from '@/components/layout/PageShell'
 import { useApiResource } from '@/hooks/use-api-resource';
 
 type Offer = {
@@ -136,14 +137,11 @@ export function MyOffersPage() {
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Mes offres</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Les offres publiées par votre établissement et les candidatures reçues.
-        </p>
-      </div>
-
+    <PageShell
+      title="Mes offres"
+      description="Les offres publiées par votre établissement et les candidatures reçues."
+    >
+      <div className="flex flex-col gap-4">
       {status === 'loading' && <PageLoading />}
       {status === 'error' && <PageError message={error} />}
       {actionError && <p className="text-sm text-red-600">{actionError}</p>}
@@ -297,6 +295,7 @@ export function MyOffersPage() {
             </ul>
           </>
         ))}
-    </div>
+      </div>
+    </PageShell>
   );
 }
