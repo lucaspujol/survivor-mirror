@@ -1,5 +1,6 @@
 import { PageEmpty, PageError, PageLoading } from '@/components/PageState'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { PageShell } from '@/components/layout/PageShell'
 import { useApiResource } from '@/hooks/use-api-resource'
 
 type Application = {
@@ -41,14 +42,11 @@ export function ApplicationsPage() {
   const { status, data, error } = useApiResource<Application[]>('/api/candidatures')
 
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Mes candidatures</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Suivi des offres auxquelles vous avez postulé.
-        </p>
-      </div>
-
+    <PageShell
+      title="Mes candidatures"
+      description="Suivi des offres auxquelles vous avez postulé."
+    >
+      <div className="flex flex-col gap-4">
       {status === 'loading' && <PageLoading />}
       {status === 'error' && <PageError message={error} />}
 
@@ -93,6 +91,7 @@ export function ApplicationsPage() {
             </ul>
           </>
         ))}
-    </div>
+      </div>
+    </PageShell>
   )
 }
