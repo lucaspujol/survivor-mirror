@@ -323,12 +323,12 @@ export function LocateControl({ map }: LocateControlProps) {
         }}
       >
         <svg viewBox="0 0 24 24" width="20" height="20">
-          <line x1="12" y1="1" x2="12" y2="5" stroke="#4A4A4A" strokeWidth="2" />
-          <line x1="12" y1="19" x2="12" y2="23" stroke="#4A4A4A" strokeWidth="2" />
-          <line x1="1" y1="12" x2="5" y2="12" stroke="#4A4A4A" strokeWidth="2" />
-          <line x1="19" y1="12" x2="23" y2="12" stroke="#4A4A4A" strokeWidth="2" />
-          <circle cx="12" cy="12" r="6" fill="none" stroke="#4A4A4A" strokeWidth="2" />
-          <circle cx="12" cy="12" r="2.5" fill="#4A4A4A" />
+          <line x1="12" y1="1" x2="12" y2="5" stroke="#1B3A6B" strokeWidth="2" />
+          <line x1="12" y1="19" x2="12" y2="23" stroke="#1B3A6B" strokeWidth="2" />
+          <line x1="1" y1="12" x2="5" y2="12" stroke="#1B3A6B" strokeWidth="2" />
+          <line x1="19" y1="12" x2="23" y2="12" stroke="#1B3A6B" strokeWidth="2" />
+          <circle cx="12" cy="12" r="6" fill="none" stroke="#1B3A6B" strokeWidth="2" />
+          <circle cx="12" cy="12" r="2.5" fill="#1B3A6B" />
         </svg>
       </button>
     )}
