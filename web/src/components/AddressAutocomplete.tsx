@@ -121,7 +121,7 @@ export function AddressAutocomplete({ value, onChange, onSelect, id = 'address' 
               aria-selected={index === activeIndex}
               onMouseDown={() => selectSuggestion(suggestion)}
               className={`cursor-pointer px-3 py-2 text-sm ${
-                index === activeIndex ? 'bg-institutional/10' : 'hover:bg-institutional/5'
+                index === activeIndex ? 'bg-primary/10' : 'hover:bg-primary/5'
               }`}
             >
               {suggestion.label}

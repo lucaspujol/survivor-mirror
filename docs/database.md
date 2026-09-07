@@ -75,8 +75,8 @@ primary key and a foreign key, `ON DELETE CASCADE`).
 
 ### `employers`
 
-Same 1–1 relationship with `users`. `activity_verified` records the Ministry's
-validation of the company's activity.
+Same 1–1 relationship with `users`. `activity_verified` records the platform
+operator's validation of the company's activity.
 
 ### `jobs`
 

@@ -1,5 +1,6 @@
 import { Outlet, useLocation } from 'react-router'
 import { AppSidebar } from '@/components/app-sidebar'
+import { DemoNotice } from '@/components/layout/DemoNotice'
 import { Separator } from '@/components/ui/separator'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
@@ -20,7 +21,10 @@ export function AppLayout() {
             <span className="text-sm font-medium">{pageTitle(pathname)}</span>
           </header>
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-            <Outlet />
+            <div className="flex-1">
+              <Outlet />
+            </div>
+            <DemoNotice />
           </div>
         </SidebarInset>
         <Toaster theme="light" position="bottom-right" />
