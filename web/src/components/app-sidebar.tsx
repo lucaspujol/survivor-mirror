@@ -1,7 +1,6 @@
 import { Link } from 'react-router'
 import { NavMain, type NavItem } from '@/components/nav-main'
 import { NavUser } from '@/components/nav-user'
-import { cn } from '@/lib/utils'
 import {
   Sidebar,
   SidebarContent,
@@ -27,65 +26,30 @@ const adminItems: NavItem[] = [
   { title: 'Utilisateurs', url: '/admin/utilisateurs', icon: <UsersIcon /> },
 ]
 
-function TricolorFlag({
-  className,
-  style,
-}: {
-  className?: string
-  style?: React.CSSProperties
-}) {
-  return (
-    <img
-      src="/logo/logo-de-la-republique-francaise.png"
-      alt="République française"
-      className={cn('object-contain', className)}
-      style={style}
-    />
-  )
-}
-
+/**
+ * Identité neutre : le nom du produit en typographie, sans bloc-marque.
+ * Aucun visuel de l'État, conformément au gel du 7 septembre 2026.
+ */
 function SidebarBrand() {
   const { state } = useSidebar()
   const isCollapsed = state === 'collapsed'
 
   if (isCollapsed) {
-    return <TricolorFlag className="size-5" />
+    return (
+      <span className="font-heading text-lg font-bold tracking-tight text-primary">
+        C
+      </span>
+    )
   }
- 
-  const X = 17
- 
+
   return (
-    <div
-      className="flex flex-col items-start"
-      style={{ '--x': `${X}px` } as React.CSSProperties}
-    >
-      <TricolorFlag className="w-auto" style={{ height: 'var(--x)' }} />
- 
-      <div
-        className="font-heading font-bold uppercase"
-        style={{
-          marginTop: 'calc(var(--x) / 2)',
-          fontSize: 'calc(var(--x) * 0.75)',
-          lineHeight: 1,
-          letterSpacing: '-0.01em',
-        }}
-      >
-        <div>Ministère du</div>
-        <div style={{ marginTop: 'calc(var(--x) / 3)' }}>Job et du Bonheur</div>
-      </div>
- 
-      <div
-        className="font-heading text-muted-foreground italic"
-        style={{
-          marginTop: 'calc(var(--x) / 2)',
-          fontSize: 'calc(var(--x) * 11 / 6 / 3.4)',
-          lineHeight: 1.3,
-        }}
-      >
-        <div>Liberté</div>
-        <div>Égalité</div>
-        <div>Fraternité</div>
-      </div>
+    <div className="flex flex-col items-start">
+      <span className="font-heading text-xl leading-none font-bold tracking-tight text-primary">
+        Chômage<span className="text-foreground">Go</span>
+      </span>
+      <span className="mt-1.5 text-[11px] leading-tight text-muted-foreground">
+        Démonstrateur technique
+      </span>
     </div>
   )
 }

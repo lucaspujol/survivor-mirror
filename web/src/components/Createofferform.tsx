@@ -196,7 +196,7 @@ export function CreateOfferForm({ onCreated }: CreateOfferFormProps) {
       <button
         type="submit"
         disabled={status === 'loading'}
-        className="rounded-md border-2 border-institutional px-4 py-2 text-sm font-medium text-institutional disabled:opacity-50"
+        className="rounded-md border-2 border-primary px-4 py-2 text-sm font-medium text-primary disabled:opacity-50"
       >
         {status === 'loading' ? 'Publication…' : 'Publier l’offre'}
       </button>

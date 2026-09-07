@@ -92,6 +92,10 @@ class JobOffer(BaseModel):
     geocoding_source: str | None
     geocoding_score: float | None
     geocoding_date: date | None
+    # The frontend types both as required: without them every "Publiée il y
+    # a..." / "Expire dans X j" label renders NaN.
+    created_at: datetime
+    employer_id: int
 
 class AdminJobOffer(JobOffer):
     lambert93_x: float | None
@@ -120,6 +124,8 @@ def job_to_offer(job: Job) -> JobOffer:
         geocoding_source=job.geocoding_source,
         geocoding_score=job.geocoding_score,
         geocoding_date=job.geocoded_at.date() if job.geocoded_at else None,
+        created_at=job.created_at,
+        employer_id=job.employer_id,
     )
 
 @app.get("/api/offres", response_model=list[JobOffer])

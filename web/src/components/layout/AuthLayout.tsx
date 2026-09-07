@@ -1,4 +1,5 @@
 import { Link, Outlet } from 'react-router'
+import { DEMO_NOTICE } from '@/components/layout/DemoNotice'
 import { Button } from '@/components/ui/button'
 import { ArrowLeftIcon } from 'lucide-react'
 
@@ -13,6 +14,11 @@ export function AuthLayout() {
       </div>
       <div className="w-full max-w-sm md:max-w-3xl">
         <Outlet />
+      </div>
+      <div className="mt-8 w-full max-w-sm md:max-w-3xl">
+        <p className="text-center text-xs text-muted-foreground">
+          {DEMO_NOTICE}
+        </p>
       </div>
     </div>
   )

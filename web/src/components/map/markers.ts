@@ -16,7 +16,7 @@ function pinIcon(fill: string, scale: number, className: string) {
   })
 }
 
-export const offerIcon = pinIcon('#1b3a6b', 1, '')
+export const offerIcon = pinIcon('#863bff', 1, '')
 export const selectedOfferIcon = pinIcon('#b8341f', 1.25, 'geo-marker--selected')
 
 export function clusterIcon(cluster: L.MarkerCluster) {

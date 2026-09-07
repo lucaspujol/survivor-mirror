@@ -34,7 +34,10 @@ class LoginIn(BaseModel):
 
 class UserOut(BaseModel):
     id: int
-    email: EmailStr
+    # Plain str, not EmailStr: this is a read of a value the database already
+    # accepted, and EmailStr rejects reserved TLDs (.local, .test) that
+    # existing accounts legitimately carry. Validation belongs on input.
+    email: str
     role: str
     # Full name of a job seeker, company name of an employer: the profile
     # tables hold the names, the users table only authenticates.
@@ -76,7 +79,7 @@ class AdminUserOut(BaseModel):
     """One row of the administrator's accounts screen."""
 
     id: int
-    email: EmailStr
+    email: str
     role: str
     display_name: str
     # Employers only; None for the other roles.
