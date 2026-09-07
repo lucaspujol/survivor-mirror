@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
 import { CONTRACT_TYPES } from '@/components/contractTypes';
@@ -61,6 +61,19 @@ export function MyOffersPage() {
 
   const editContractInfo = CONTRACT_TYPES.find((c) => c.value === editContractType);
   const editWorkModeInfo = WORK_MODES.find((w) => w.value === editWorkMode);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const modifierButtonRefs = useRef<Record<number, HTMLButtonElement | null>>({});
+  const previousEditingIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (editingId !== null) {
+      previousEditingIdRef.current = editingId;
+      titleInputRef.current?.focus();
+    } else if (previousEditingIdRef.current !== null) {
+      modifierButtonRefs.current[previousEditingIdRef.current]?.focus();
+      previousEditingIdRef.current = null;
+    }
+  }, [editingId]);
 
   const startEdit = (offer: Offer) => {
     setEditingId(offer.id);
@@ -209,6 +222,9 @@ export function MyOffersPage() {
                           {editingId !== offer.id && (
                             <div className="flex gap-2">
                               <button
+                                ref={(el) => {
+                                  modifierButtonRefs.current[offer.id] = el;
+                                }}
                                 onClick={() => startEdit(offer)}
                                 className="rounded-md border px-3 py-1.5 text-xs font-normal"
                               >
@@ -232,6 +248,7 @@ export function MyOffersPage() {
                               Intitulé
                             </label>
                             <input
+                              ref={titleInputRef}
                               id={`title-${offer.id}`}
                               value={editTitle}
                               onChange={(e) => setEditTitle(e.target.value)}
@@ -265,23 +282,25 @@ export function MyOffersPage() {
                               ))}
                             </select>
 
-                            {editContractInfo?.hasDuration && (
-                              <>
-                                <label
-                                  className="text-sm font-medium"
-                                  htmlFor={`contract-duration-${offer.id}`}
-                                >
-                                  Durée
-                                </label>
-                                <input
-                                  id={`contract-duration-${offer.id}`}
-                                  value={editContractDuration}
-                                  onChange={(e) => setEditContractDuration(e.target.value)}
-                                  placeholder="ex: 3 mois, 6 mois, 1 an"
-                                  className="rounded-md border px-3 py-2 text-sm"
-                                />
-                              </>
-                            )}
+                            <div aria-live="polite">
+                              {editContractInfo?.hasDuration && (
+                                <>
+                                  <label
+                                    className="text-sm font-medium"
+                                    htmlFor={`contract-duration-${offer.id}`}
+                                  >
+                                    Durée
+                                  </label>
+                                  <input
+                                    id={`contract-duration-${offer.id}`}
+                                    value={editContractDuration}
+                                    onChange={(e) => setEditContractDuration(e.target.value)}
+                                    placeholder="ex: 3 mois, 6 mois, 1 an"
+                                    className="rounded-md border px-3 py-2 text-sm"
+                                  />
+                                </>
+                              )}
+                            </div>
 
                             <label className="text-sm font-medium" htmlFor={`work-mode-${offer.id}`}>
                               Mode de travail
@@ -315,22 +334,24 @@ export function MyOffersPage() {
                               ))}
                             </select>
 
-                            {editWorkModeInfo?.requiresAddress ? (
-                              <>
-                                <label className="text-sm font-medium" htmlFor={`address-${offer.id}`}>
-                                  Adresse
-                                </label>
-                                <AddressAutocomplete
-                                  id={`address-${offer.id}`}
-                                  value={editAddress}
-                                  onChange={setEditAddress}
-                                />
-                              </>
-                            ) : (
-                              <p className="text-xs text-muted-foreground">
-                                Offre 100% télétravail : pas d'adresse, elle n'apparaîtra pas sur la carte.
-                              </p>
-                            )}
+                            <div aria-live="polite">
+                              {editWorkModeInfo?.requiresAddress ? (
+                                <>
+                                  <label className="text-sm font-medium" htmlFor={`address-${offer.id}`}>
+                                    Adresse
+                                  </label>
+                                  <AddressAutocomplete
+                                    id={`address-${offer.id}`}
+                                    value={editAddress}
+                                    onChange={setEditAddress}
+                                  />
+                                </>
+                              ) : (
+                                <p className="text-xs text-muted-foreground">
+                                  Offre 100% télétravail : pas d'adresse, elle n'apparaîtra pas sur la carte.
+                                </p>
+                              )}
+                            </div>
 
                             <div className="mt-1 flex gap-2">
                               <button

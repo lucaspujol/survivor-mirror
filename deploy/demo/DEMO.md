@@ -1,6 +1,6 @@
-# ChômageGo — demo build
+# GéoEmploi — demo build
 
-This directory is the `chomagego-demo-build` artifact produced by GitHub
+This directory is the `geoemploi-demo-build` artifact produced by GitHub
 Actions. It contains the **compiled** frontend, the API sources with their
 migrations, and a Compose file that wires them together. Running it does not
 require the repository, a Node toolchain or a Python toolchain.
@@ -38,9 +38,9 @@ and are already filled in with a profile, offers or applications.
 
 | Role | Email | Password |
 | --- | --- | --- |
-| Job seeker (`seeker`) | `candidat@demo.chomagego.example` | `ChomageGo2026!` |
-| Employer (`employer`) | `employeur@demo.chomagego.example` | `ChomageGo2026!` |
-| Administrator (`admin`) | `admin@demo.chomagego.example` | `ChomageGo2026!` |
+| Job seeker (`seeker`) | `candidat@demo.geoemploi.example` | `geoemploi2026!` |
+| Employer (`employer`) | `employeur@demo.geoemploi.example` | `geoemploi2026!` |
+| Administrator (`admin`) | `admin@demo.geoemploi.example` | `geoemploi2026!` |
 
 The administrator matters: the API deliberately refuses to register an `admin`
 (`api/app/schemas.py`), so this account can only come from the seed.
@@ -51,7 +51,7 @@ The administrator matters: the API deliberately refuses to register an `admin`
 > `compose.yaml`: replace them before anything leaves a demo machine.
 
 The secondary seeded accounts (other employers, other job seekers) use the same
-password and the same `@demo.chomagego.example` domain, reserved by RFC 2606:
+password and the same `@demo.geoemploi.example` domain, reserved by RFC 2606:
 it cannot be registered and no mail can ever reach it.
 
 ## Demo walkthrough
@@ -60,17 +60,17 @@ it cannot be registered and no mail can ever reach it.
    clustered; zooming refetches only the visible bounds.
 2. Click a marker: the popup gives the job title and the company. Signed out,
    the page invites you to sign in as an employer to publish.
-3. Sign in as `candidat@demo.chomagego.example` — the sidebar shows
+3. Sign in as `candidat@demo.geoemploi.example` — the sidebar shows
    *Mes candidatures*, listing Camille Fontaine's three applications with the
    offer, the company, the city, the status and the dates.
-4. Sign in as `employeur@demo.chomagego.example` — the sidebar shows
+4. Sign in as `employeur@demo.geoemploi.example` — the sidebar shows
    *Mes offres*, listing the two offers of *Numérique Océan* and the
    applications each has received. The publish form appears under the map.
 5. Publish an offer from that form. The address field autocompletes through
    the government Adresse API, so this step needs internet access; the offer
    is attached to the signed-in employer and the new marker appears without a
    reload.
-6. Sign in as `admin@demo.chomagego.example` — the *Administration* section
+6. Sign in as `admin@demo.geoemploi.example` — the *Administration* section
    appears with *Utilisateurs*, the read-only list of the 15 accounts, their
    role and their activity.
 

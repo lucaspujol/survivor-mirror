@@ -1,20 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import L from 'leaflet';
-import { AddressAutocomplete } from './AddressAutocomplete';
 
-type LocateStatus = 'idle' | 'locating' | 'denied' | 'unsupported' | 'manual';
+type LocateStatus = 'idle' | 'locating' | 'denied' | 'unsupported';
 
 interface LocateControlProps {
   map: L.Map | null;
+  focusLocation?: { lat: number; lng: number } | null;
 }
 
 const LOCATION_COLOR = '#5B9BD5';
 
-export function LocateControl({ map }: LocateControlProps) {
+export function LocateControl({ map, focusLocation = null }: LocateControlProps) {
   const [status, setStatus] = useState<LocateStatus>('idle');
-  const [manualCity, setManualCity] = useState('');
   const [hasLastPosition, setHasLastPosition] = useState(false);
   const lastPositionRef = useRef<{ lat: number; lng: number } | null>(null);
+  const locateButtonRef = useRef<HTMLButtonElement>(null);
+  const okButtonRef = useRef<HTMLButtonElement>(null);
 
   const accuracyMarkerRef = useRef<L.Marker | null>(null);
   const positionDotRef = useRef<L.Marker | null>(null);
@@ -202,26 +204,51 @@ export function LocateControl({ map }: LocateControlProps) {
         setStatus('idle');
       },
       () => {
+        clearPositionMarkers();
         setStatus('denied');
       },
       { timeout: 8000 }
     );
   };
 
-  const handleManualSelect = (label: string, coords: { lat: number; lng: number }) => {
-    setManualCity(label);
-    if (map) {
-      clearPositionMarkers();
-      map.setView([coords.lat, coords.lng], 12);
-      lastPositionRef.current = coords;
-      setHasLastPosition(true);
-      setStatus('manual');
-    }
-  };
-
   const handleRecenter = () => {
     if (!map || !lastPositionRef.current) return;
     map.setView([lastPositionRef.current.lat, lastPositionRef.current.lng], map.getZoom());
+  };
+
+  useEffect(() => {
+    if (status === 'denied' || status === 'unsupported') {
+      okButtonRef.current?.focus();
+    }
+  }, [status]);
+
+  useEffect(() => {
+    const root = document.getElementById('root');
+    if (!root) return;
+
+    if (status === 'denied' || status === 'unsupported') {
+      root.setAttribute('inert', '');
+    } else {
+      root.removeAttribute('inert');
+    }
+
+    return () => root.removeAttribute('inert');
+  }, [status]);
+
+  useEffect(() => {
+    if (focusLocation) {
+      clearPositionMarkers();
+    }
+  }, [focusLocation]);
+
+  const closeFailureDialog = () => {
+    setStatus('idle');
+    locateButtonRef.current?.focus();
+  };
+
+  const retryFromDialog = () => {
+    setStatus('idle');
+    handleLocate();
   };
 
   return (
@@ -236,74 +263,114 @@ export function LocateControl({ map }: LocateControlProps) {
         borderRadius: 4,
         boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
         padding: 6,
-        width: status === 'idle' || status === 'locating' ? 190 : 220,
+        width: 190,
         fontSize: 13,
       }}
     >
-      {status !== 'denied' && status !== 'unsupported' && status !== 'manual' && (
-        <>
-          <button
-            onClick={handleLocate}
-            disabled={status === 'locating'}
-            style={{
-              border: '2px solid #1B3A6B',
-              color: '#1B3A6B',
-              background: 'white',
-              borderRadius: 4,
-              padding: '6px 8px',
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: status === 'locating' ? 'default' : 'pointer',
-            }}
-          >
-            {status === 'locating' ? 'Localisation…' : 'Me localiser'}
-          </button>
-          <p style={{ margin: '4px 0 0', fontSize: 10, color: '#666' }}>
-            Utilisé uniquement pour centrer la carte, jamais enregistré.
-          </p>
-        </>
-      )}
+      <button
+        ref={locateButtonRef}
+        onClick={handleLocate}
+        disabled={status === 'locating'}
+        style={{
+          border: '2px solid #1B3A6B',
+          color: '#1B3A6B',
+          background: 'white',
+          borderRadius: 4,
+          padding: '6px 12px',
+          fontSize: 13,
+          fontWeight: 500,
+          cursor: status === 'locating' ? 'default' : 'pointer',
+        }}
+      >
+        {status === 'locating' ? 'Localisation…' : '📍 Me localiser'}
+      </button>
+      <p style={{ margin: '4px 0 0', fontSize: 10, color: '#666' }}>
+        Utilisé uniquement pour centrer la carte, jamais enregistré.
+      </p>
+    </div>
 
-      {(status === 'denied' || status === 'unsupported' || status === 'manual') && (
-        <div>
-          <p style={{ margin: '0 0 6px', fontSize: 12 }}>
+    {(status === 'denied' || status === 'unsupported') && createPortal(
+      <div
+        onClick={closeFailureDialog}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.4)',
+          zIndex: 2000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="locate-failure-title"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') closeFailureDialog();
+          }}
+          style={{
+            background: 'white',
+            borderRadius: 8,
+            padding: 20,
+            maxWidth: 280,
+            boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+          }}
+        >
+          <h2 id="locate-failure-title" style={{ margin: '0 0 8px', fontSize: 15, color: '#1B3A6B' }}>
+            Localisation impossible
+          </h2>
+          <p style={{ margin: '0 0 16px', fontSize: 13, color: '#444' }}>
             {status === 'unsupported'
               ? "Votre navigateur ne permet pas la géolocalisation."
-              : "Position non disponible ou refusée."}
-            {' '}Indiquez votre ville à la place :
+              : "Nous n'avons pas pu accéder à votre position."}
+            {' '}Vous pouvez aussi utiliser la barre de recherche par zone en haut de la page.
           </p>
-          <AddressAutocomplete
-            value={manualCity}
-            onChange={setManualCity}
-            onSelect={handleManualSelect}
-            id="manual-city"
-          />
-          <button
-            onClick={() => {
-              setStatus('idle');
-              setManualCity('');
-            }}
-            style={{
-              marginTop: 6,
-              background: 'none',
-              border: 'none',
-              color: '#1B3A6B',
-              fontSize: 11,
-              textDecoration: 'underline',
-              cursor: 'pointer',
-              padding: 0,
-            }}
-          >
-            Réessayer la géolocalisation
-          </button>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            {status === 'denied' && (
+              <button
+                onClick={retryFromDialog}
+                style={{
+                  border: '1px solid #1B3A6B',
+                  color: '#1B3A6B',
+                  background: 'white',
+                  borderRadius: 4,
+                  padding: '6px 12px',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                }}
+              >
+                Réessayer
+              </button>
+            )}
+            <button
+              ref={okButtonRef}
+              onClick={closeFailureDialog}
+              style={{
+                border: 'none',
+                color: 'white',
+                background: '#1B3A6B',
+                borderRadius: 4,
+                padding: '6px 14px',
+                fontSize: 13,
+                fontWeight: 500,
+                cursor: 'pointer',
+              }}
+            >
+              OK
+            </button>
+          </div>
         </div>
-      )}
-    </div>
+      </div>,
+      document.body
+    )}
 
     {hasLastPosition && (
       <button
         onClick={handleRecenter}
         title="Recentrer sur ma dernière position"
+        aria-label="Recentrer la carte sur ma dernière position"
         style={{
           position: 'absolute',
           bottom: 24,
@@ -323,12 +390,12 @@ export function LocateControl({ map }: LocateControlProps) {
         }}
       >
         <svg viewBox="0 0 24 24" width="20" height="20">
-          <line x1="12" y1="1" x2="12" y2="5" stroke="#1B3A6B" strokeWidth="2" />
-          <line x1="12" y1="19" x2="12" y2="23" stroke="#1B3A6B" strokeWidth="2" />
-          <line x1="1" y1="12" x2="5" y2="12" stroke="#1B3A6B" strokeWidth="2" />
-          <line x1="19" y1="12" x2="23" y2="12" stroke="#1B3A6B" strokeWidth="2" />
-          <circle cx="12" cy="12" r="6" fill="none" stroke="#1B3A6B" strokeWidth="2" />
-          <circle cx="12" cy="12" r="2.5" fill="#1B3A6B" />
+          <line x1="12" y1="1" x2="12" y2="5" stroke="#4A4A4A" strokeWidth="2" />
+          <line x1="12" y1="19" x2="12" y2="23" stroke="#4A4A4A" strokeWidth="2" />
+          <line x1="1" y1="12" x2="5" y2="12" stroke="#4A4A4A" strokeWidth="2" />
+          <line x1="19" y1="12" x2="23" y2="12" stroke="#4A4A4A" strokeWidth="2" />
+          <circle cx="12" cy="12" r="6" fill="none" stroke="#4A4A4A" strokeWidth="2" />
+          <circle cx="12" cy="12" r="2.5" fill="#4A4A4A" />
         </svg>
       </button>
     )}

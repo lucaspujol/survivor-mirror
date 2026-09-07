@@ -11,12 +11,23 @@ interface AddressAutocompleteProps {
   onChange: (value: string) => void;
   onSelect?: (label: string, coords: { lat: number; lng: number }) => void;
   id?: string;
+  className?: string;
+  placeholder?: string;
+  required?: boolean;
 }
 
 const DEBOUNCE_MS = 250;
 const MIN_QUERY_LENGTH = 3;
 
-export function AddressAutocomplete({ value, onChange, onSelect, id = 'address' }: AddressAutocompleteProps) {
+export function AddressAutocomplete({
+  value,
+  onChange,
+  onSelect,
+  id = 'address',
+  className,
+  placeholder = '12 rue de Rivoli, 75004 Paris',
+  required = true,
+}: AddressAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -33,7 +44,7 @@ export function AddressAutocomplete({ value, onChange, onSelect, id = 'address' 
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
     debounceRef.current = setTimeout(() => {
-      abortRef.current?.abort();
+      abortRef.current?.abort(); // annule la requête précédente encore en vol
       const controller = new AbortController();
       abortRef.current = controller;
 
@@ -103,9 +114,9 @@ export function AddressAutocomplete({ value, onChange, onSelect, id = 'address' 
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={() => setTimeout(() => setIsOpen(false), 150)}
-        placeholder="12 rue de Rivoli, 75004 Paris"
-        required
-        className="w-full rounded-md border px-3 py-2 text-sm"
+        placeholder={placeholder}
+        required={required}
+        className={className ?? 'w-full rounded-md border px-3 py-2 text-sm'}
       />
 
       {isOpen && (
