@@ -63,6 +63,8 @@ class EmployerOfferOut(BaseModel):
     description: str
     contract_type: str
     contract_duration: str | None
+    work_mode: str
+    time_commitment: str
     city: str
     address: str | None
     location_status: str

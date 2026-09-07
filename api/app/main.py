@@ -5,7 +5,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from geoalchemy2.functions import ST_MakeEnvelope
 from geoalchemy2.shape import from_shape, to_shape
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from pyproj import Transformer
 from shapely.geometry import Point
 from sqlalchemy import func, select
@@ -80,39 +80,43 @@ class JobOffer(BaseModel):
     id: int
     title: str
     company: str
-    employer_id: int
     description: str
     contract_type: str
     contract_duration: str | None
+    work_mode: str
+    time_commitment: str
     address: str | None
     city: str
-    created_at: datetime
-    lat: float
-    lng: float
+    lat: float | None
+    lng: float | None
     geocoding_source: str | None
     geocoding_score: float | None
     geocoding_date: date | None
 
 class AdminJobOffer(JobOffer):
-    lambert93_x: float
-    lambert93_y: float
+    lambert93_x: float | None
+    lambert93_y: float | None
 
 def job_to_offer(job: Job) -> JobOffer:
-    assert job.location is not None
-    point = cast(Point, to_shape(job.location))
+    if job.location is not None:
+        point = cast(Point, to_shape(job.location))
+        lat, lng = point.y, point.x
+    else:
+        lat, lng = None, None
+
     return JobOffer(
         id=job.id,
         title=job.title,
         company=job.employer.company_name,
-        employer_id=job.employer_id,
         description=job.description,
         contract_type=job.contract_type,
         contract_duration=job.contract_duration,
+        work_mode=job.work_mode,
+        time_commitment=job.time_commitment,
         address=job.location_address,
         city=job.location_city,
-        created_at=job.created_at,
-        lat=point.y,
-        lng=point.x,
+        lat=lat,
+        lng=lng,
         geocoding_source=job.geocoding_source,
         geocoding_score=job.geocoding_score,
         geocoding_date=job.geocoded_at.date() if job.geocoded_at else None,
@@ -149,6 +153,7 @@ def list_offers_admin(
     result = []
     for job in jobs:
         offer = job_to_offer(job)
+        assert offer.lat is not None and offer.lng is not None
         x, y = to_lambert93(offer.lat, offer.lng)
         result.append(AdminJobOffer(**offer.model_dump(), lambert93_x=x, lambert93_y=y))
     return result
@@ -161,7 +166,17 @@ class OfferCreate(BaseModel):
     description: str
     contract_type: str
     contract_duration: str | None = None
-    address: str
+    work_mode: str
+    time_commitment: str
+    address: str | None = None
+
+    @model_validator(mode="after")
+    def address_required_unless_remote(self) -> "OfferCreate":
+        if self.work_mode != "remote" and not self.address:
+            raise ValueError(
+                "L'adresse est obligatoire, sauf pour une offre 100% télétravail."
+            )
+        return self
 
 @app.post("/api/offres", response_model=JobOffer, status_code=201)
 def create_offer(
@@ -171,29 +186,46 @@ def create_offer(
 ) -> JobOffer:
     employer = session.get(Employer, user.id)
     if employer is None:
-        # An employer account always carries its profile row; a missing one
-        # means the account is broken, not that the request is wrong.
         raise HTTPException(status_code=500, detail="Employer profile is missing")
 
-    try:
-        geo = geocode_address(payload.address)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if payload.work_mode == "remote":
+        job = Job(
+            employer_id=employer.user_id,
+            title=payload.title,
+            description=payload.description,
+            contract_type=payload.contract_type,
+            contract_duration=payload.contract_duration,
+            work_mode=payload.work_mode,
+            time_commitment=payload.time_commitment,
+            location_address=None,
+            location_city="Télétravail",
+            location=None,
+            location_status="pending",
+        )
+    else:
+        assert payload.address is not None
+        try:
+            geo = geocode_address(payload.address)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    job = Job(
-        employer_id=employer.user_id,
-        title=payload.title,
-        description=payload.description,
-        contract_type=payload.contract_type,
-        contract_duration=payload.contract_duration,
-        location_address=payload.address,
-        location_city=geo.city or "Ville inconnue",
-        location=from_shape(Point(geo.lng, geo.lat), srid=4326),
-        geocoding_source=geo.source,
-        geocoding_score=geo.score,
-        geocoded_at=datetime.now(timezone.utc),
-        location_status="geocoded",
-    )
+        job = Job(
+            employer_id=employer.user_id,
+            title=payload.title,
+            description=payload.description,
+            contract_type=payload.contract_type,
+            contract_duration=payload.contract_duration,
+            work_mode=payload.work_mode,
+            time_commitment=payload.time_commitment,
+            location_address=payload.address,
+            location_city=geo.city or "Ville inconnue",
+            location=from_shape(Point(geo.lng, geo.lat), srid=4326),
+            geocoding_source=geo.source,
+            geocoding_score=geo.score,
+            geocoded_at=datetime.now(timezone.utc),
+            location_status="geocoded",
+        )
+
     session.add(job)
     session.commit()
     session.refresh(job, attribute_names=["employer"])
@@ -205,6 +237,8 @@ class OfferUpdate(BaseModel):
     description: str | None = None
     contract_type: str | None = None
     contract_duration: str | None = None
+    work_mode: str | None = None
+    time_commitment: str | None = None
     address: str | None = None
 
 def get_job_or_404(session: Session, offer_id: int) -> Job:
@@ -214,9 +248,6 @@ def get_job_or_404(session: Session, offer_id: int) -> Job:
     return job
 
 def require_owner_or_admin(user, job: Job) -> None:
-    """L'admin modère (peut agir sur toute offre) ; un employeur ne touche
-    qu'à ses propres offres ; personne d'autre n'a le droit.
-    """
     if user.role == "admin":
         return
     if user.role == "employer" and job.employer_id == user.id:
@@ -243,8 +274,20 @@ def update_offer(
         job.contract_type = payload.contract_type
     if payload.contract_duration is not None:
         job.contract_duration = payload.contract_duration
+    if payload.work_mode is not None:
+        job.work_mode = payload.work_mode
+    if payload.time_commitment is not None:
+        job.time_commitment = payload.time_commitment
 
-    if payload.address is not None:
+    if job.work_mode == "remote":
+        job.location_address = None
+        job.location_city = "Télétravail"
+        job.location = None
+        job.geocoding_source = None
+        job.geocoding_score = None
+        job.geocoded_at = None
+        job.location_status = "pending"
+    elif payload.address is not None:
         try:
             geo = geocode_address(payload.address)
         except ValueError as exc:

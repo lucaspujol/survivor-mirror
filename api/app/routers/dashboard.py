@@ -64,6 +64,8 @@ def my_offers(user: CurrentEmployer, db: DbSession) -> list[EmployerOfferOut]:
             description=job.description,
             contract_type=job.contract_type,
             contract_duration=job.contract_duration,
+            work_mode=job.work_mode,
+            time_commitment=job.time_commitment,
             city=job.location_city,
             address=job.location_address,
             location_status=job.location_status,

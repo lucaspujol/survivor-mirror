@@ -44,6 +44,13 @@ LOCATION_STATUSES = ("pending", "geocoded", "to_verify")
 # Contract types. `contract_duration` (free text, e.g. "3 mois") complements
 # the fixed-term ones (cdd, stage, alternance, interim); left null for cdi.
 CONTRACT_TYPES = ("cdi", "cdd", "stage", "alternance", "interim", "freelance")
+# Work mode. Fully remote offers carry no location: geocoding is skipped and
+# location stays NULL, which the existing "geocoded requires location" check
+# constraint already allows (it only constrains the 'geocoded' status).
+WORK_MODES = ("on_site", "hybrid", "remote")
+# Independent from WORK_MODES: a job can be full-time remote, part-time
+# on-site, etc. - the two dimensions don't overlap.
+TIME_COMMITMENTS = ("full_time", "part_time")
 
 role_enum = Enum(*ROLES, name="user_role", native_enum=False, create_constraint=False)
 application_status_enum = Enum(
@@ -62,6 +69,18 @@ location_status_enum = Enum(
 contract_type_enum = Enum(
     *CONTRACT_TYPES,
     name="contract_type",
+    native_enum=False,
+    create_constraint=False,
+)
+work_mode_enum = Enum(
+    *WORK_MODES,
+    name="work_mode",
+    native_enum=False,
+    create_constraint=False,
+)
+time_commitment_enum = Enum(
+    *TIME_COMMITMENTS,
+    name="time_commitment",
     native_enum=False,
     create_constraint=False,
 )
@@ -177,6 +196,14 @@ class Job(Base):
             _in_check("contract_type", CONTRACT_TYPES),
             name="ck_jobs_contract_type",
         ),
+        CheckConstraint(
+            _in_check("work_mode", WORK_MODES),
+            name="ck_jobs_work_mode",
+        ),
+        CheckConstraint(
+            _in_check("time_commitment", TIME_COMMITMENTS),
+            name="ck_jobs_time_commitment",
+        ),
         Index("ix_jobs_employer_id", "employer_id"),
         # Map search: visible bounds first, then distance.
         Index("ix_jobs_location", "location", postgresql_using="gist"),
@@ -195,6 +222,17 @@ class Job(Base):
     # Free text, e.g. "3 mois" - relevant for cdd/stage/alternance/interim,
     # left null for cdi/freelance.
     contract_duration: Mapped[str | None] = mapped_column(Text)
+    # "on_site" / "hybrid" / "remote". A fully remote offer has no location
+    # (location, location_address stay NULL), so it never appears on the map
+    # but remains visible in the employer's own offer list.
+    work_mode: Mapped[str] = mapped_column(
+        work_mode_enum, nullable=False, server_default=text("'on_site'")
+    )
+    # "full_time" / "part_time" - indépendant de work_mode : un poste peut
+    # être à la fois temps plein et télétravail, ou temps partiel et sur site.
+    time_commitment: Mapped[str] = mapped_column(
+        time_commitment_enum, nullable=False, server_default=text("'full_time'")
+    )
     # Address as entered by the employer, sent to the Adresse API.
     location_address: Mapped[str | None] = mapped_column(Text)
     location_city: Mapped[str] = mapped_column(Text, nullable=False)
