@@ -12,6 +12,7 @@ export type MyOffer = {
   location_status: 'pending' | 'geocoded' | 'to_verify'
   application_count: number
   created_at: string
+  expires_at: string
 }
 
 export const LOCATION_STATUS_LABELS: Record<MyOffer['location_status'], string> = {

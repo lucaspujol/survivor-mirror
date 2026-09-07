@@ -11,7 +11,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { useAuth, type Role } from '@/lib/auth'
-import { BriefcaseIcon, FileTextIcon, MapIcon, UsersIcon } from 'lucide-react'
+import { BellIcon, BriefcaseIcon, FileTextIcon, FlagIcon, MapIcon, UsersIcon } from 'lucide-react'
 
 const mapItem: NavItem = { title: 'Carte', url: '/', icon: <MapIcon /> }
 
@@ -23,8 +23,16 @@ const roleItems: Record<Role, NavItem[]> = {
   admin: [],
 }
 
+// Every signed-in role receives notifications, so this sits outside roleItems.
+const notificationsItem: NavItem = {
+  title: 'Notifications',
+  url: '/notifications',
+  icon: <BellIcon />,
+}
+
 const adminItems: NavItem[] = [
   { title: 'Utilisateurs', url: '/admin/utilisateurs', icon: <UsersIcon /> },
+  { title: 'Modération', url: '/admin/signalements', icon: <FlagIcon /> },
 ]
 
 function TricolorFlag({
@@ -103,7 +111,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavMain
           label="Navigation"
-          items={[mapItem, ...(user ? roleItems[user.role] : [])]}
+          items={[mapItem, ...(user ? [...roleItems[user.role], notificationsItem] : [])]}
         />
         {user?.role === 'admin' && <NavMain label="Administration" items={adminItems} />}
       </SidebarContent>

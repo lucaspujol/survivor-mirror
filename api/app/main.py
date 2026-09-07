@@ -14,7 +14,7 @@ from app.db import get_session
 from app.deps import CurrentAdmin, CurrentEmployer, CurrentUser
 from app.models import Employer, Job
 
-from app.routers import auth, dashboard
+from app.routers import applications, auth, dashboard, notifications, reports
 
 app = FastAPI(
     title="ChômageGo API",
@@ -32,6 +32,9 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(dashboard.router)
+app.include_router(applications.router)
+app.include_router(notifications.router)
+app.include_router(reports.router)
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
@@ -92,6 +95,9 @@ class JobOffer(BaseModel):
     geocoding_source: str | None
     geocoding_score: float | None
     geocoding_date: date | None
+    created_at: datetime
+    expires_at: datetime
+    employer_id: int
 
 class AdminJobOffer(JobOffer):
     lambert93_x: float | None
@@ -120,6 +126,9 @@ def job_to_offer(job: Job) -> JobOffer:
         geocoding_source=job.geocoding_source,
         geocoding_score=job.geocoding_score,
         geocoding_date=job.geocoded_at.date() if job.geocoded_at else None,
+        created_at=job.created_at,
+        expires_at=job.expires_at,
+        employer_id=job.employer_id,
     )
 
 @app.get("/api/offres", response_model=list[JobOffer])
@@ -134,6 +143,7 @@ def list_offers(
         select(Job)
         .options(joinedload(Job.employer))
         .where(Job.location.isnot(None))
+        .where(Job.expires_at > func.now())
     )
 
     if south is not None and west is not None and north is not None and east is not None:

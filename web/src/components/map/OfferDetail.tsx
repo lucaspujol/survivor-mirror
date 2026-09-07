@@ -1,7 +1,7 @@
-import { Link, useLocation } from 'react-router'
-import { toast } from 'sonner'
-import { ArrowLeftIcon, BuildingIcon, CalendarClockIcon, FlagIcon, MapPinIcon } from 'lucide-react'
+import { ArrowLeftIcon, BuildingIcon, CalendarClockIcon, MapPinIcon } from 'lucide-react'
+import { ApplyButton } from '@/components/offers/ApplyButton'
 import { ContractBadge } from '@/components/offers/ContractBadge'
+import { ReportOfferDialog } from '@/components/offers/ReportOfferDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -15,7 +15,6 @@ type OfferDetailProps = {
 
 export function OfferDetail({ offer, onBack }: OfferDetailProps) {
   const { user } = useAuth()
-  const location = useLocation()
   const remaining = daysLeft(offer)
 
   return (
@@ -55,25 +54,14 @@ export function OfferDetail({ offer, onBack }: OfferDetailProps) {
       <p className="text-xs text-muted-foreground">{publishedLabel(offer.created_at)}</p>
 
       <div className="flex flex-col gap-2">
-        {user?.role === 'seeker' || !user ? (
-          user ? (
-            <Button onClick={() => toast.info('Les candidatures arrivent bientôt.')}>
-              Postuler
-            </Button>
-          ) : (
-            <Button render={<Link to="/login" state={{ from: location }} />}>
-              Se connecter pour postuler
-            </Button>
-          )
-        ) : null}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => toast.info('Signalement enregistré côté interface.')}
-        >
-          <FlagIcon />
-          Signaler cette offre
-        </Button>
+        <ApplyButton offerId={offer.id} isExpired={remaining === 0} />
+        {user ? (
+          <ReportOfferDialog offerId={offer.id} offerTitle={offer.title} />
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Connectez-vous pour signaler cette offre.
+          </p>
+        )}
       </div>
     </div>
   )

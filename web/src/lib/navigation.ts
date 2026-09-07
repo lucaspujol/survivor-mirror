@@ -4,6 +4,8 @@ const TITLES: Record<string, string> = {
   '/mes-offres': 'Mes offres',
   '/me': 'Mon compte',
   '/admin/utilisateurs': 'Utilisateurs',
+  '/admin/signalements': 'Modération',
+  '/notifications': 'Notifications',
 }
 
 export function pageTitle(pathname: string): string {

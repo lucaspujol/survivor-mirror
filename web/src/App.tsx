@@ -4,12 +4,14 @@ import { AuthLayout } from '@/components/layout/AuthLayout'
 import { RequireAuth } from '@/components/layout/RequireAuth'
 import { RequireRole } from '@/components/layout/RequireRole'
 import { AccountPage } from '@/pages/AccountPage'
+import { AdminReportsPage } from '@/pages/AdminReportsPage'
 import { AdminUsersPage } from '@/pages/AdminUsersPage'
 import { ApplicationsPage } from '@/pages/ApplicationsPage'
 import { HomePage } from '@/pages/HomePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { MyOffersPage } from '@/pages/MyOffersPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
+import { NotificationsPage } from '@/pages/NotificationsPage'
 import { RegisterPage } from '@/pages/RegisterPage'
 
 function App() {
@@ -25,6 +27,7 @@ function App() {
 
         <Route element={<RequireAuth />}>
           <Route path="me" element={<AccountPage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
         </Route>
 
         {/* Each section is restricted to the role that owns its data; the API
@@ -39,6 +42,7 @@ function App() {
 
         <Route element={<RequireRole roles={['admin']} />}>
           <Route path="admin/utilisateurs" element={<AdminUsersPage />} />
+          <Route path="admin/signalements" element={<AdminReportsPage />} />
         </Route>
 
         <Route path="introuvable" element={<NotFoundPage />} />
