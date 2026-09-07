@@ -13,8 +13,6 @@ export type Offer = {
   city: string
   address: string | null
   created_at: string
-  /** Server-side archive date; the API stops serving the offer past it. */
-  expires_at: string
   lat: number
   lng: number
 }
@@ -25,6 +23,9 @@ export type Bounds = {
   north: number
   east: number
 }
+
+/** Brief: an offer is archived 30 days after publication. */
+export const OFFER_LIFETIME_DAYS = 30
 
 export function listOffers(bounds?: Bounds): Promise<Offer[]> {
   const query = bounds
@@ -43,10 +44,8 @@ export function daysSince(iso: string): number {
   return Math.floor(elapsed / 86_400_000)
 }
 
-/** Days before the offer is archived, from the date the API decided on. */
-export function daysLeft(offer: { expires_at: string }): number {
-  const remaining = new Date(offer.expires_at).getTime() - Date.now()
-  return Math.max(0, Math.ceil(remaining / 86_400_000))
+export function daysLeft(offer: { created_at: string }): number {
+  return Math.max(0, OFFER_LIFETIME_DAYS - daysSince(offer.created_at))
 }
 
 export function publishedLabel(iso: string): string {

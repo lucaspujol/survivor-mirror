@@ -71,7 +71,6 @@ def my_offers(user: CurrentEmployer, db: DbSession) -> list[EmployerOfferOut]:
             location_status=job.location_status,
             application_count=application_count,
             created_at=job.created_at,
-            expires_at=job.expires_at,
         )
         for job, application_count in rows
     ]

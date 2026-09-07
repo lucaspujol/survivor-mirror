@@ -51,16 +51,6 @@ WORK_MODES = ("on_site", "hybrid", "remote")
 # Independent from WORK_MODES: a job can be full-time remote, part-time
 # on-site, etc. - the two dimensions don't overlap.
 TIME_COMMITMENTS = ("full_time", "part_time")
-# Why an offer was flagged. Kept coarse on purpose: a free-text `details`
-# field carries the specifics, the category is what the moderation queue
-# sorts on.
-REPORT_REASONS = ("fraud", "misleading", "discrimination", "offensive", "other")
-# Moderation lifecycle. "reviewed" means an admin acted (typically by
-# deleting the offer), "dismissed" means the report was unfounded.
-REPORT_STATUSES = ("pending", "reviewed", "dismissed")
-# In-app notification kinds. The brief only mandates the first one; the
-# other two close the loop for the job seeker.
-NOTIFICATION_TYPES = ("application_received", "application_status", "offer_removed")
 
 role_enum = Enum(*ROLES, name="user_role", native_enum=False, create_constraint=False)
 application_status_enum = Enum(
@@ -91,24 +81,6 @@ work_mode_enum = Enum(
 time_commitment_enum = Enum(
     *TIME_COMMITMENTS,
     name="time_commitment",
-    native_enum=False,
-    create_constraint=False,
-)
-report_reason_enum = Enum(
-    *REPORT_REASONS,
-    name="report_reason",
-    native_enum=False,
-    create_constraint=False,
-)
-report_status_enum = Enum(
-    *REPORT_STATUSES,
-    name="report_status",
-    native_enum=False,
-    create_constraint=False,
-)
-notification_type_enum = Enum(
-    *NOTIFICATION_TYPES,
-    name="notification_type",
     native_enum=False,
     create_constraint=False,
 )
@@ -274,14 +246,6 @@ class Job(Base):
     location_status: Mapped[str] = mapped_column(
         location_status_enum, nullable=False, server_default=text("'pending'")
     )
-    # Brief: an offer is archived 30 days after publication. Archiving is
-    # lazy - every public read filters on this column - so no scheduled job
-    # is needed and an employer can extend an offer by moving the date.
-    expires_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        server_default=text("now() + interval '30 days'"),
-    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -294,9 +258,6 @@ class Job(Base):
 
     employer: Mapped[Employer] = relationship(back_populates="jobs")
     applications: Mapped[list["Application"]] = relationship(
-        back_populates="job", cascade="all, delete-orphan"
-    )
-    reports: Mapped[list["Report"]] = relationship(
         back_populates="job", cascade="all, delete-orphan"
     )
 
@@ -338,87 +299,3 @@ class Application(Base):
 
     job: Mapped[Job] = relationship(back_populates="applications")
     job_seeker: Mapped[JobSeeker] = relationship(back_populates="applications")
-
-
-class Report(Base):
-    """A user flagging an offer as fraudulent or non-compliant.
-
-    The brief makes the employer responsible for the content of an offer and
-    requires a reporting mechanism; this table is the moderation queue behind
-    it. Reporters are recorded so the same account cannot pile reports onto
-    one offer, and so an admin can weigh a repeat reporter.
-    """
-
-    __tablename__ = "reports"
-    __table_args__ = (
-        # One report per user and offer: reporting twice is a no-op, not a
-        # way to inflate the queue.
-        UniqueConstraint("job_id", "reporter_id", name="uq_reports_job_reporter"),
-        CheckConstraint(_in_check("reason", REPORT_REASONS), name="ck_reports_reason"),
-        CheckConstraint(_in_check("status", REPORT_STATUSES), name="ck_reports_status"),
-        Index("ix_reports_status", "status"),
-    )
-
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    job_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False
-    )
-    reporter_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    )
-    reason: Mapped[str] = mapped_column(report_reason_enum, nullable=False)
-    # Free text from the reporter, optional: the category is the required part.
-    details: Mapped[str | None] = mapped_column(Text)
-    status: Mapped[str] = mapped_column(
-        report_status_enum, nullable=False, server_default=text("'pending'")
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        server_default=func.now(),
-        onupdate=func.now(),
-    )
-
-    job: Mapped[Job] = relationship(back_populates="reports")
-    reporter: Mapped[User] = relationship()
-
-
-class Notification(Base):
-    """In-app notification. The brief asks for a notification on each new
-    application and explicitly not for an email, so this is a plain row the
-    recipient reads from their own screen.
-
-    The message is rendered at write time: a notification is a record of what
-    was true when it fired, so deleting the offer it refers to must not
-    rewrite history (hence the nullable job/application links).
-    """
-
-    __tablename__ = "notifications"
-    __table_args__ = (
-        CheckConstraint(
-            _in_check("type", NOTIFICATION_TYPES), name="ck_notifications_type"
-        ),
-        # The unread badge reads by recipient, newest first.
-        Index("ix_notifications_user_id_created_at", "user_id", "created_at"),
-    )
-
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
-    )
-    type: Mapped[str] = mapped_column(notification_type_enum, nullable=False)
-    title: Mapped[str] = mapped_column(Text, nullable=False)
-    body: Mapped[str] = mapped_column(Text, nullable=False)
-    # Deep link target; nulled by the FK when the offer disappears.
-    job_id: Mapped[int | None] = mapped_column(
-        BigInteger, ForeignKey("jobs.id", ondelete="SET NULL")
-    )
-    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-
-    user: Mapped[User] = relationship()

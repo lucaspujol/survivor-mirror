@@ -1,8 +1,13 @@
-import { CalendarClockIcon, ClockIcon, LaptopIcon, MapPinIcon } from 'lucide-react'
+import {
+  CalendarClockIcon,
+  ClockIcon,
+  LaptopIcon,
+  MapPinIcon,
+  UsersIcon,
+} from 'lucide-react'
 import { ContractBadge } from '@/components/offers/ContractBadge'
 import { DeleteOfferDialog } from '@/components/offers/DeleteOfferDialog'
 import { EditOfferDialog } from '@/components/offers/EditOfferDialog'
-import { OfferApplicantsDialog } from '@/components/offers/OfferApplicantsDialog'
 import { TIME_COMMITMENTS } from '@/components/timeCommitments'
 import { WORK_MODES } from '@/components/workModes'
 import { Badge } from '@/components/ui/badge'
@@ -56,6 +61,10 @@ export function MyOfferCard({ offer, onSaved, onDeleted }: MyOfferCardProps) {
               {LOCATION_STATUS_LABELS[offer.location_status]}
             </Badge>
           )}
+          <Badge variant="outline">
+            <UsersIcon />
+            {offer.application_count} candidature{offer.application_count > 1 ? 's' : ''}
+          </Badge>
           <Badge variant={remaining <= 5 ? 'destructive' : 'outline'}>
             <CalendarClockIcon />
             {remaining === 0 ? 'Expirée' : `Expire dans ${remaining} j`}
@@ -63,15 +72,7 @@ export function MyOfferCard({ offer, onSaved, onDeleted }: MyOfferCardProps) {
         </div>
 
         <p className="line-clamp-2 text-sm">{offer.description}</p>
-
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <OfferApplicantsDialog
-            offerId={offer.id}
-            offerTitle={offer.title}
-            applicationCount={offer.application_count}
-          />
-          <p className="text-xs text-muted-foreground">{publishedLabel(offer.created_at)}</p>
-        </div>
+        <p className="text-xs text-muted-foreground">{publishedLabel(offer.created_at)}</p>
       </CardContent>
     </Card>
   )
