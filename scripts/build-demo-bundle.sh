@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 #
-# Builds the `chomagego-demo-build` bundle: the compiled frontend, the API and
+# Builds the `geoemploi-demo-build` bundle: the compiled frontend, the API and
 # a Compose file that runs them without the repository.
 #
 #   ./scripts/build-demo-bundle.sh [output-directory]
 #
-# Default output: build/chomagego-demo-build/
+# Default output: build/geoemploi-demo-build/
 # Used as-is by the `demo-build` job in .github/workflows/ci.yml, so what CI
 # publishes is exactly what this script produces locally.
 
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-out_dir="${1:-$repo_root/build/chomagego-demo-build}"
+out_dir="${1:-$repo_root/build/geoemploi-demo-build}"
 
 echo "==> Building the frontend"
 cd "$repo_root/web"
@@ -40,7 +40,7 @@ cp "$repo_root/deploy/demo/compose.yaml" "$out_dir/compose.yaml"
 cp "$repo_root/deploy/demo/DEMO.md" "$out_dir/DEMO.md"
 
 cat > "$out_dir/BUILD-INFO.txt" <<INFO
-ChômageGo — demo build
+GéoEmploi — demo build
 ======================
 
 Commit      : ${GITHUB_SHA:-$(git -C "$repo_root" rev-parse HEAD)}

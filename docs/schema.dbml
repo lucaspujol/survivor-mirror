@@ -1,7 +1,7 @@
-// ChômageGo logical model - https://dbdiagram.io (import: DBML)
+// GéoEmploi logical model - https://dbdiagram.io (import: DBML)
 // Source of truth: api/app/models.py + api/migrations/versions/
 
-Project chomagego {
+Project geoemploi {
   database_type: 'PostgreSQL'
   Note: '''
     Search for geolocated job offers.

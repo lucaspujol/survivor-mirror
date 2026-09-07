@@ -17,7 +17,7 @@ from app.models import Employer, Job
 from app.routers import auth, dashboard
 
 app = FastAPI(
-    title="ChômageGo API",
+    title="GéoEmploi API",
     version="0.1.0",
     docs_url="/api/docs",
     openapi_url="/api/openapi.json",

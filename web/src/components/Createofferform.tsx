@@ -121,21 +121,23 @@ export function CreateOfferForm({ onCreated }: CreateOfferFormProps) {
         </select>
       </div>
 
-      {selectedContractType?.hasDuration && (
-        <div className="flex flex-col gap-1">
-          <label htmlFor="contractDuration" className="text-sm font-medium">
-            Durée
-          </label>
-          <input
-            id="contractDuration"
-            value={contractDuration}
-            onChange={(e) => setContractDuration(e.target.value)}
-            placeholder="ex: 3 mois, 6 mois, 1 an"
-            required
-            className="rounded-md border px-3 py-2 text-sm"
-          />
-        </div>
-      )}
+      <div aria-live="polite">
+        {selectedContractType?.hasDuration && (
+          <div className="flex flex-col gap-1">
+            <label htmlFor="contractDuration" className="text-sm font-medium">
+              Durée
+            </label>
+            <input
+              id="contractDuration"
+              value={contractDuration}
+              onChange={(e) => setContractDuration(e.target.value)}
+              placeholder="ex: 3 mois, 6 mois, 1 an"
+              required
+              className="rounded-md border px-3 py-2 text-sm"
+            />
+          </div>
+        )}
+      </div>
 
       <div className="flex flex-col gap-1">
         <label htmlFor="workMode" className="text-sm font-medium">
@@ -173,21 +175,23 @@ export function CreateOfferForm({ onCreated }: CreateOfferFormProps) {
         </select>
       </div>
 
-      {selectedWorkMode?.requiresAddress ? (
-        <div className="flex flex-col gap-1">
-          <label htmlFor="address" className="text-sm font-medium">
-            Adresse
-          </label>
-          <AddressAutocomplete value={address} onChange={setAddress} />
-          <span className="text-xs text-muted-foreground">
-            Géocodée automatiquement via la Base Adresse Nationale.
-          </span>
-        </div>
-      ) : (
-        <p className="text-xs text-muted-foreground">
-          Offre 100% télétravail : pas d'adresse à renseigner, elle n'apparaîtra pas sur la carte.
-        </p>
-      )}
+      <div aria-live="polite">
+        {selectedWorkMode?.requiresAddress ? (
+          <div className="flex flex-col gap-1">
+            <label htmlFor="address" className="text-sm font-medium">
+              Adresse
+            </label>
+            <AddressAutocomplete value={address} onChange={setAddress} />
+            <span className="text-xs text-muted-foreground">
+              Géocodée automatiquement via la Base Adresse Nationale.
+            </span>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Offre 100% télétravail : pas d'adresse à renseigner, elle n'apparaîtra pas sur la carte.
+          </p>
+        )}
+      </div>
 
       {status === 'error' && (
         <p className="text-sm text-red-600">{errorMessage}</p>

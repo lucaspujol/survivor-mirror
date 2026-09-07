@@ -2,9 +2,9 @@ services:
   db:
     image: postgis/postgis:16-3.4-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-chomagego}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-chomagego}
-      POSTGRES_DB: ${POSTGRES_DB:-chomagego}
+      POSTGRES_USER: ${POSTGRES_USER:-geoemploi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-geoemploi}
+      POSTGRES_DB: ${POSTGRES_DB:-geoemploi}
     ports:
       - "${POSTGRES_HOST_PORT:-5433}:5432"
     volumes:
@@ -12,7 +12,7 @@ services:
     healthcheck:
       # -h: without a host, pg_isready answers OK as soon as the temporary
       # initdb server is up, well before Postgres accepts TCP connections.
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER:-chomagego} -d ${POSTGRES_DB:-chomagego}"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U ${POSTGRES_USER:-geoemploi} -d ${POSTGRES_DB:-geoemploi}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -24,7 +24,7 @@ services:
     # idempotent: restarting the stack never duplicates anything.
     command: sh -c "alembic upgrade head && python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-chomagego}:${POSTGRES_PASSWORD:-chomagego}@db:5432/${POSTGRES_DB:-chomagego}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-geoemploi}:${POSTGRES_PASSWORD:-geoemploi}@db:5432/${POSTGRES_DB:-geoemploi}
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
       JWT_EXPIRE_DAYS: ${JWT_EXPIRE_DAYS:-7}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}

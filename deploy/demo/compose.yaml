@@ -1,6 +1,6 @@
-# ChômageGo — demo stack, self-contained.
+# GéoEmploi — demo stack, self-contained.
 #
-# This file ships inside the `chomagego-demo-build` artifact and runs the
+# This file ships inside the `geoemploi-demo-build` artifact and runs the
 # prototype from the build output alone: no repository clone, no local
 # toolchain, nothing to compile. See DEMO.md.
 #
@@ -10,15 +10,15 @@ services:
   db:
     image: postgis/postgis:16-3.4-alpine
     environment:
-      POSTGRES_USER: chomagego
-      POSTGRES_PASSWORD: chomagego-demo
-      POSTGRES_DB: chomagego
+      POSTGRES_USER: geoemploi
+      POSTGRES_PASSWORD: geoemploi-demo
+      POSTGRES_DB: geoemploi
     volumes:
       - demo_db_data:/var/lib/postgresql/data
     healthcheck:
       # -h: without a host, pg_isready answers OK as soon as the temporary
       # initdb server is up, well before Postgres accepts TCP connections.
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U chomagego -d chomagego"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U geoemploi -d geoemploi"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -33,7 +33,7 @@ services:
       && python -m app.seed
       && uvicorn app.main:app --host 0.0.0.0 --port 8000"
     environment:
-      DATABASE_URL: postgresql+psycopg://chomagego:chomagego-demo@db:5432/chomagego
+      DATABASE_URL: postgresql+psycopg://geoemploi:geoemploi-demo@db:5432/geoemploi
       JWT_SECRET: demo-only-not-a-real-secret
       JWT_EXPIRE_DAYS: 7
       COOKIE_SECURE: false

@@ -1,3 +1,4 @@
+import { AddressAutocomplete } from '@/components/AddressAutocomplete'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -9,7 +10,11 @@ type SearchBannerProps = {
   onLocationChange: (location: string) => void
   onSearch: () => void
   onReset: () => void
+  keywordSuggestions?: string[]
 }
+
+const inputStyle =
+  'h-10 rounded-none border-0 border-b-2 border-primary/40 bg-muted px-3 italic placeholder:italic'
 
 /** Institutional search band: keywords on the left, place on the right. */
 export function SearchBanner({
@@ -19,6 +24,7 @@ export function SearchBanner({
   onLocationChange,
   onSearch,
   onReset,
+  keywordSuggestions = [],
 }: SearchBannerProps) {
   return (
     <form
@@ -40,24 +46,31 @@ export function SearchBanner({
           <Input
             id="search-query"
             type="search"
+            list="keyword-suggestions"
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Par exemple : développeur web"
             className="h-10 rounded-none border-0 border-b-2 border-primary bg-muted px-3 italic placeholder:italic"
           />
+          {}
+          <datalist id="keyword-suggestions">
+            {keywordSuggestions.map((suggestion) => (
+              <option key={suggestion} value={suggestion} />
+            ))}
+          </datalist>
         </div>
 
         <div className="grid gap-2">
           <Label htmlFor="search-location" className="text-sm">
             Par zone géographique (ville, adresse)
           </Label>
-          <Input
+          <AddressAutocomplete
             id="search-location"
-            type="search"
             value={location}
-            onChange={(event) => onLocationChange(event.target.value)}
+            onChange={onLocationChange}
             placeholder="Par exemple : Lyon"
-            className="h-10 rounded-none border-0 border-b-2 border-primary/40 bg-muted px-3 italic placeholder:italic"
+            required={false}
+            className={inputStyle}
           />
         </div>
       </div>

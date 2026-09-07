@@ -86,17 +86,19 @@ export function OfferFormFields({ idPrefix, draft, onChange }: OfferFormFieldsPr
         </Select>
       </Field>
 
-      {hasDuration(draft.contract_type) && (
-        <Field>
-          <FieldLabel htmlFor={`${idPrefix}-contract-duration`}>Durée</FieldLabel>
-          <Input
-            id={`${idPrefix}-contract-duration`}
-            value={draft.contract_duration}
-            onChange={(event) => onChange({ contract_duration: event.target.value })}
-            placeholder="ex : 3 mois, 6 mois, 1 an"
-          />
-        </Field>
-      )}
+      <div aria-live="polite">
+        {hasDuration(draft.contract_type) && (
+          <Field>
+            <FieldLabel htmlFor={`${idPrefix}-contract-duration`}>Durée</FieldLabel>
+            <Input
+              id={`${idPrefix}-contract-duration`}
+              value={draft.contract_duration}
+              onChange={(event) => onChange({ contract_duration: event.target.value })}
+              placeholder="ex : 3 mois, 6 mois, 1 an"
+            />
+          </Field>
+        )}
+      </div>
 
       <Field>
         <FieldLabel htmlFor={`${idPrefix}-work-mode`}>Mode de travail</FieldLabel>
@@ -136,23 +138,25 @@ export function OfferFormFields({ idPrefix, draft, onChange }: OfferFormFieldsPr
         </Select>
       </Field>
 
-      {requiresAddress(draft.work_mode) ? (
-        <Field>
-          <FieldLabel htmlFor={`${idPrefix}-address`}>Adresse</FieldLabel>
-          <AddressAutocomplete
-            id={`${idPrefix}-address`}
-            value={draft.address}
-            onChange={(address) => onChange({ address })}
-          />
+      <div aria-live="polite">
+        {requiresAddress(draft.work_mode) ? (
+          <Field>
+            <FieldLabel htmlFor={`${idPrefix}-address`}>Adresse</FieldLabel>
+            <AddressAutocomplete
+              id={`${idPrefix}-address`}
+              value={draft.address}
+              onChange={(address) => onChange({ address })}
+            />
+            <FieldDescription>
+              L'adresse est géocodée pour placer l'offre sur la carte.
+            </FieldDescription>
+          </Field>
+        ) : (
           <FieldDescription>
-            L'adresse est géocodée pour placer l'offre sur la carte.
+            Offre 100% télétravail : pas d'adresse, elle n'apparaîtra pas sur la carte.
           </FieldDescription>
-        </Field>
-      ) : (
-        <FieldDescription>
-          Offre 100% télétravail : pas d'adresse, elle n'apparaîtra pas sur la carte.
-        </FieldDescription>
-      )}
+        )}
+      </div>
     </FieldGroup>
   )
 }

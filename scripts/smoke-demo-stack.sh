@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Checks a running ChômageGo demo stack over HTTP only.
+# Checks a running GéoEmploi demo stack over HTTP only.
 #
 #   ./scripts/smoke-demo-stack.sh [base-url]     # default http://localhost:8080
 #
@@ -10,8 +10,8 @@
 set -euo pipefail
 
 base="${1:-http://localhost:8080}"
-password='ChomageGo2026!'
-domain='demo.chomagego.example'
+password='geoemploi2026!'
+domain='demo.geoemploi.example'
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 ok() { echo "  ok — $*"; }
