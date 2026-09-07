@@ -2,19 +2,22 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { AddressAutocomplete } from '@/components/AddressAutocomplete';
 import { CONTRACT_TYPES } from '@/components/contractTypes';
+import { WORK_MODES } from '@/components/workModes';
+import { TIME_COMMITMENTS } from '@/components/timeCommitments';
 import { PageEmpty, PageError, PageLoading } from '@/components/PageState';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PageShell } from '@/components/layout/PageShell'
 import { useApiResource } from '@/hooks/use-api-resource';
 
 type Offer = {
   id: number;
   title: string;
   description: string;
+  city: string;
+  address: string | null;
   contract_type: string;
   contract_duration: string | null;
-  address: string | null;
-  city: string;
+  work_mode: string;
+  time_commitment: string;
   location_status: 'pending' | 'geocoded' | 'to_verify';
   application_count: number;
   created_at: string;
@@ -34,6 +37,7 @@ const dateFormat = new Intl.DateTimeFormat('fr-FR', {
 
 export function MyOffersPage() {
   const { status, data, error } = useApiResource<Offer[]>('/api/mes-offres');
+
   const [offers, setOffers] = useState<Offer[]>([]);
 
   useEffect(() => {
@@ -47,6 +51,8 @@ export function MyOffersPage() {
   const [editDescription, setEditDescription] = useState('');
   const [editContractType, setEditContractType] = useState('cdi');
   const [editContractDuration, setEditContractDuration] = useState('');
+  const [editWorkMode, setEditWorkMode] = useState('on_site');
+  const [editTimeCommitment, setEditTimeCommitment] = useState('full_time');
   const [editAddress, setEditAddress] = useState('');
   const [originalAddress, setOriginalAddress] = useState('');
   const [savingId, setSavingId] = useState<number | null>(null);
@@ -54,6 +60,7 @@ export function MyOffersPage() {
   const [actionError, setActionError] = useState('');
 
   const editContractInfo = CONTRACT_TYPES.find((c) => c.value === editContractType);
+  const editWorkModeInfo = WORK_MODES.find((w) => w.value === editWorkMode);
 
   const startEdit = (offer: Offer) => {
     setEditingId(offer.id);
@@ -61,8 +68,11 @@ export function MyOffersPage() {
     setEditDescription(offer.description);
     setEditContractType(offer.contract_type);
     setEditContractDuration(offer.contract_duration ?? '');
+    setEditWorkMode(offer.work_mode);
+    setEditTimeCommitment(offer.time_commitment);
     setEditAddress(offer.address ?? '');
     setOriginalAddress(offer.address ?? '');
+    setActionError('');
   };
 
   const cancelEdit = () => {
@@ -70,11 +80,16 @@ export function MyOffersPage() {
   };
 
   const saveEdit = async (id: number) => {
+    if (editWorkModeInfo?.requiresAddress && !editAddress.trim()) {
+      setActionError("Une adresse est nécessaire pour ce mode de travail.");
+      return;
+    }
+
     setSavingId(id);
     setActionError('');
     try {
       const addressChanged = editAddress !== originalAddress;
- 
+
       const response = await fetch(`/api/offres/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -83,7 +98,9 @@ export function MyOffersPage() {
           description: editDescription,
           contract_type: editContractType,
           contract_duration: editContractInfo?.hasDuration ? editContractDuration : null,
-          ...(addressChanged ? { address: editAddress } : {}),
+          work_mode: editWorkMode,
+          time_commitment: editTimeCommitment,
+          ...(addressChanged || editWorkMode !== 'remote' ? { address: editAddress } : {}),
         }),
       });
 
@@ -103,9 +120,16 @@ export function MyOffersPage() {
                 description: updated.description,
                 contract_type: updated.contract_type,
                 contract_duration: updated.contract_duration,
+                work_mode: updated.work_mode,
+                time_commitment: updated.time_commitment,
                 address: updated.address,
                 city: updated.city,
-                location_status: addressChanged ? 'geocoded' : offer.location_status,
+                location_status:
+                  updated.work_mode === 'remote'
+                    ? 'pending'
+                    : addressChanged
+                      ? 'geocoded'
+                      : offer.location_status,
               }
             : offer
         )
@@ -137,11 +161,14 @@ export function MyOffersPage() {
   };
 
   return (
-    <PageShell
-      title="Mes offres"
-      description="Les offres publiées par votre établissement et les candidatures reçues."
-    >
-      <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
+      <div>
+        <h1 className="text-2xl font-semibold">Mes offres</h1>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Les offres publiées par votre établissement et les candidatures reçues.
+        </p>
+      </div>
+
       {status === 'loading' && <PageLoading />}
       {status === 'error' && <PageError message={error} />}
       {actionError && <p className="text-sm text-red-600">{actionError}</p>}
@@ -164,6 +191,8 @@ export function MyOffersPage() {
             <ul className="flex flex-col gap-3">
               {offers.map((offer) => {
                 const contractInfo = CONTRACT_TYPES.find((c) => c.value === offer.contract_type);
+                const workModeInfo = WORK_MODES.find((w) => w.value === offer.work_mode);
+                const timeCommitmentInfo = TIME_COMMITMENTS.find((t) => t.value === offer.time_commitment);
 
                 return (
                   <li key={offer.id}>
@@ -209,56 +238,99 @@ export function MyOffersPage() {
                               className="rounded-md border px-3 py-2 text-sm"
                             />
 
-              <label className="text-sm font-medium" htmlFor={`description-${offer.id}`}>
-                Description
-              </label>
-              <textarea
-                id={`description-${offer.id}`}
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                rows={3}
-                className="rounded-md border px-3 py-2 text-sm"
-              />
+                            <label className="text-sm font-medium" htmlFor={`description-${offer.id}`}>
+                              Description
+                            </label>
+                            <textarea
+                              id={`description-${offer.id}`}
+                              value={editDescription}
+                              onChange={(e) => setEditDescription(e.target.value)}
+                              rows={3}
+                              className="rounded-md border px-3 py-2 text-sm"
+                            />
 
-                <label className="text-sm font-medium" htmlFor={`contract-type-${offer.id}`}>
-                  Type de contrat
-                </label>
-                <select
-                  id={`contract-type-${offer.id}`}
-                  value={editContractType}
-                  onChange={(e) => setEditContractType(e.target.value)}
-                  className="rounded-md border px-3 py-2 text-sm"
-                >
-                  {CONTRACT_TYPES.map((type) => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
+                            <label className="text-sm font-medium" htmlFor={`contract-type-${offer.id}`}>
+                              Type de contrat
+                            </label>
+                            <select
+                              id={`contract-type-${offer.id}`}
+                              value={editContractType}
+                              onChange={(e) => setEditContractType(e.target.value)}
+                              className="rounded-md border px-3 py-2 text-sm"
+                            >
+                              {CONTRACT_TYPES.map((type) => (
+                                <option key={type.value} value={type.value}>
+                                  {type.label}
+                                </option>
+                              ))}
+                            </select>
 
-                {editContractInfo?.hasDuration && (
-                  <>
-                    <label className="text-sm font-medium" htmlFor={`contract-duration-${offer.id}`}>
-                      Durée
-                    </label>
-                    <input
-                      id={`contract-duration-${offer.id}`}
-                      value={editContractDuration}
-                      onChange={(e) => setEditContractDuration(e.target.value)}
-                      placeholder="ex: 3 mois, 6 mois, 1 an"
-                      className="rounded-md border px-3 py-2 text-sm"
-                    />
-                  </>
-                )}
+                            {editContractInfo?.hasDuration && (
+                              <>
+                                <label
+                                  className="text-sm font-medium"
+                                  htmlFor={`contract-duration-${offer.id}`}
+                                >
+                                  Durée
+                                </label>
+                                <input
+                                  id={`contract-duration-${offer.id}`}
+                                  value={editContractDuration}
+                                  onChange={(e) => setEditContractDuration(e.target.value)}
+                                  placeholder="ex: 3 mois, 6 mois, 1 an"
+                                  className="rounded-md border px-3 py-2 text-sm"
+                                />
+                              </>
+                            )}
 
-                <label className="text-sm font-medium" htmlFor={`address-${offer.id}`}>
-                  Adresse
-                </label>
-                <AddressAutocomplete
-                  id={`address-${offer.id}`}
-                  value={editAddress}
-                  onChange={setEditAddress}
-                />
+                            <label className="text-sm font-medium" htmlFor={`work-mode-${offer.id}`}>
+                              Mode de travail
+                            </label>
+                            <select
+                              id={`work-mode-${offer.id}`}
+                              value={editWorkMode}
+                              onChange={(e) => setEditWorkMode(e.target.value)}
+                              className="rounded-md border px-3 py-2 text-sm"
+                            >
+                              {WORK_MODES.map((mode) => (
+                                <option key={mode.value} value={mode.value}>
+                                  {mode.label}
+                                </option>
+                              ))}
+                            </select>
+
+                            <label className="text-sm font-medium" htmlFor={`time-commitment-${offer.id}`}>
+                              Temps de travail
+                            </label>
+                            <select
+                              id={`time-commitment-${offer.id}`}
+                              value={editTimeCommitment}
+                              onChange={(e) => setEditTimeCommitment(e.target.value)}
+                              className="rounded-md border px-3 py-2 text-sm"
+                            >
+                              {TIME_COMMITMENTS.map((tc) => (
+                                <option key={tc.value} value={tc.value}>
+                                  {tc.label}
+                                </option>
+                              ))}
+                            </select>
+
+                            {editWorkModeInfo?.requiresAddress ? (
+                              <>
+                                <label className="text-sm font-medium" htmlFor={`address-${offer.id}`}>
+                                  Adresse
+                                </label>
+                                <AddressAutocomplete
+                                  id={`address-${offer.id}`}
+                                  value={editAddress}
+                                  onChange={setEditAddress}
+                                />
+                              </>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">
+                                Offre 100% télétravail : pas d'adresse, elle n'apparaîtra pas sur la carte.
+                              </p>
+                            )}
 
                             <div className="mt-1 flex gap-2">
                               <button
@@ -280,8 +352,11 @@ export function MyOffersPage() {
                           <>
                             <p>{offer.description}</p>
                             <p className="mt-2 text-muted-foreground">
-                              {offer.address ?? offer.city} · {locationLabels[offer.location_status]}{' '}
-                              · {contractInfo?.label ?? offer.contract_type}
+                              {workModeInfo?.label ?? offer.work_mode} · {timeCommitmentInfo?.label ?? offer.time_commitment}
+                              {offer.work_mode !== 'remote' && (
+                                <> · {offer.address ?? offer.city} · {locationLabels[offer.location_status]}</>
+                              )}
+                              {' '}· {contractInfo?.label ?? offer.contract_type}
                               {offer.contract_duration ? ` (${offer.contract_duration})` : ''} ·
                               publiée le {dateFormat.format(new Date(offer.created_at))}
                             </p>
@@ -295,7 +370,6 @@ export function MyOffersPage() {
             </ul>
           </>
         ))}
-      </div>
-    </PageShell>
+    </div>
   );
 }

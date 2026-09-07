@@ -8,6 +8,8 @@ export type Offer = {
   description: string
   contract_type: string
   contract_duration: string | null
+  work_mode: string
+  time_commitment: string
   city: string
   address: string | null
   created_at: string
@@ -62,6 +64,10 @@ export type OfferFilters = {
   contractTypes: string[]
   /** Selected windows, in days since publication; empty means no restriction. */
   periods: string[]
+  /** Selected work modes ("on_site" / "hybrid" / "remote"); empty means no restriction. */
+  workModes: string[]
+  /** Selected time commitments ("full_time" / "part_time"); empty means no restriction. */
+  timeCommitments: string[]
 }
 
 export const EMPTY_FILTERS: OfferFilters = {
@@ -69,6 +75,8 @@ export const EMPTY_FILTERS: OfferFilters = {
   location: '',
   contractTypes: [],
   periods: [],
+  workModes: [],
+  timeCommitments: [],
 }
 
 export const PERIODS = [
@@ -98,13 +106,25 @@ function matchesPeriods(offer: Offer, periods: string[]): boolean {
   return periods.some((days) => daysSince(offer.created_at) <= Number(days))
 }
 
+function matchesWorkModes(offer: Offer, workModes: string[]): boolean {
+  if (workModes.length === 0) return true
+  return workModes.includes(offer.work_mode)
+}
+
+function matchesTimeCommitments(offer: Offer, timeCommitments: string[]): boolean {
+  if (timeCommitments.length === 0) return true
+  return timeCommitments.includes(offer.time_commitment)
+}
+
 export function matchesFilters(offer: Offer, filters: OfferFilters): boolean {
   return (
     matchesQuery(offer, filters.query) &&
     matchesLocation(offer, filters.location) &&
     (filters.contractTypes.length === 0 ||
       filters.contractTypes.includes(offer.contract_type)) &&
-    matchesPeriods(offer, filters.periods)
+    matchesPeriods(offer, filters.periods) &&
+    matchesWorkModes(offer, filters.workModes) &&
+    matchesTimeCommitments(offer, filters.timeCommitments)
   )
 }
 
