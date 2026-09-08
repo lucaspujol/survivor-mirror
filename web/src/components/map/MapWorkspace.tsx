@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { SlidersHorizontalIcon } from 'lucide-react'
 import { FilterSidebar, type FacetKey } from '@/components/map/FilterSidebar'
 import { JobMap } from '@/components/map/JobMap'
@@ -6,6 +6,7 @@ import { OfferDetail } from '@/components/map/OfferDetail'
 import { OfferResults } from '@/components/map/OfferResults'
 import { SearchBanner } from '@/components/map/SearchBanner'
 import { CreateOfferDialog } from '@/components/offers/CreateOfferDialog'
+import { SkipLink } from '@/components/SkipLink'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
@@ -23,6 +24,9 @@ import {
   type SortKey,
 } from '@/lib/offers'
 
+/** Frames to wait for a pin to come back: the fly-back runs 0.6s (~40 frames). */
+const MAX_FOCUS_FRAMES = 60
+
 export function MapWorkspace() {
   const { user } = useAuth()
   const { offers, isLoading, setBounds, refresh } = useOffersInBounds()
@@ -33,6 +37,55 @@ export function MapWorkspace() {
   const [sort, setSort] = useState<SortKey>('recent')
   const [selected, setSelected] = useState<Offer | null>(null)
   const [focusLocation, setFocusLocation] = useState<{ lat: number; lng: number } | null>(null)
+  const detailRef = useRef<HTMLDivElement>(null)
+  const mapFocusRef = useRef<{ focusMarker: (id: number) => boolean } | null>(null)
+  // Where the open offer was picked from, so closing it can return the focus
+  // to the pin or the card the reader actually left.
+  const originRef = useRef<{ id: number; from: 'map' | 'list' } | null>(null)
+
+  const selectFrom = useCallback((offer: Offer, from: 'map' | 'list') => {
+    originRef.current = { id: offer.id, from }
+    setSelected(offer)
+  }, [])
+
+  // Selecting an offer swaps the list for the detail panel further down the
+  // page: without moving focus, a keyboard user stays stranded on the pin.
+  useEffect(() => {
+    if (selected) detailRef.current?.focus({ preventScroll: true })
+  }, [selected])
+
+  const handleBack = useCallback(() => {
+    const origin = originRef.current
+    originRef.current = null
+    setSelected(null)
+
+    if (!origin) return
+
+    // Closing the panel flies the map back, and Leaflet only re-attaches the
+    // pins once that settles. So a marker origin waits for its pin across the
+    // animation instead of taking the result card that is ready immediately;
+    // the card stays the fallback for a pin that never returns (clustered
+    // away, or panned out of view).
+    let attempts = 0
+    const restore = () => {
+      if (origin.from === 'map') {
+        if (mapFocusRef.current?.focusMarker(origin.id)) return
+        if (attempts++ < MAX_FOCUS_FRAMES) {
+          requestAnimationFrame(restore)
+          return
+        }
+      }
+
+      const card = document.querySelector<HTMLElement>(`[data-offer-id="${origin.id}"]`)
+      if (card) {
+        card.focus({ preventScroll: true })
+        return
+      }
+
+      if (attempts++ < MAX_FOCUS_FRAMES) requestAnimationFrame(restore)
+    }
+    requestAnimationFrame(restore)
+  }, [])
 
   const [showAllOffers, setShowAllOffers] = useState(false)
   const [allOffers, setAllOffers] = useState<Offer[]>([])
@@ -132,9 +185,12 @@ export function MapWorkspace() {
       />
 
       <div className="flex flex-col gap-8 lg:flex-row">
-        <aside className="hidden w-72 shrink-0 lg:block">{sidebar}</aside>
+        <aside className="hidden w-72 shrink-0 lg:block">
+          <SkipLink targetId="offer-results">Passer la zone des filtres</SkipLink>
+          {sidebar}
+        </aside>
 
-        <div className="flex min-w-0 flex-1 flex-col gap-4">
+        <div id="offer-results" tabIndex={-1} className="flex min-w-0 flex-1 flex-col gap-4 outline-none">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Sheet>
               <SheetTrigger
@@ -158,11 +214,16 @@ export function MapWorkspace() {
             )}
           </div>
 
+          {/* Leaflet puts every marker in the tab order, so without this the
+              keyboard crosses the whole map before reaching the results. */}
+          <SkipLink targetId="offer-list">Passer la carte</SkipLink>
+
           <div className="relative h-[26rem] overflow-hidden rounded-xl border md:h-[32rem]">
             <JobMap
               offers={visible}
               selected={selected}
-              onSelect={setSelected}
+              onSelect={(offer) => selectFrom(offer, 'map')}
+              focusRef={mapFocusRef}
               onBoundsChange={handleBoundsChange}
               focusLocation={focusLocation}
             />
@@ -178,23 +239,25 @@ export function MapWorkspace() {
             )}
           </div>
 
-          {selected ? (
-            <div className="rounded-xl border bg-card">
-              <OfferDetail offer={selected} onBack={() => setSelected(null)} />
-            </div>
-          ) : (
-            <OfferResults
-              offers={visible}
-              isLoading={showAllOffers ? isLoadingAll : isLoading}
-              sort={sort}
-              onSortChange={setSort}
-              selectedId={null}
-              onSelect={setSelected}
-              showingAll={showAllOffers}
-              onShowAll={handleShowAll}
-              onBackToMapArea={handleBackToMapArea}
-            />
-          )}
+          <div id="offer-list" tabIndex={-1} className="outline-none">
+            {selected ? (
+              <div ref={detailRef} tabIndex={-1} className="rounded-xl border bg-card outline-none">
+                <OfferDetail offer={selected} onBack={handleBack} />
+              </div>
+            ) : (
+              <OfferResults
+                offers={visible}
+                isLoading={showAllOffers ? isLoadingAll : isLoading}
+                sort={sort}
+                onSortChange={setSort}
+                selectedId={null}
+                onSelect={(offer) => selectFrom(offer, 'list')}
+                showingAll={showAllOffers}
+                onShowAll={handleShowAll}
+                onBackToMapArea={handleBackToMapArea}
+              />
+            )}
+          </div>
         </div>
       </div>
     </main>

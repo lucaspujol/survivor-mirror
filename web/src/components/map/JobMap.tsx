@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { MapContainer, Marker, TileLayer, ZoomControl, useMap, useMapEvents } from 'react-leaflet'
 import MarkerClusterGroup from 'react-leaflet-cluster'
 import L from 'leaflet'
@@ -24,6 +24,13 @@ function toBounds(bounds: L.LatLngBounds): Bounds {
     north: bounds.getNorth(),
     east: bounds.getEast(),
   }
+}
+
+/** Mac users reach for Cmd, everyone else for Ctrl. */
+function zoomModifierLabel() {
+  return typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
+    ? '\u2318 Cmd'
+    : 'Ctrl'
 }
 
 function BoundsWatcher({ onChange }: { onChange: (bounds: Bounds) => void }) {
@@ -86,6 +93,49 @@ function FocusLocation({ location }: { location: { lat: number; lng: number } | 
   return null
 }
 
+/**
+ * Leaflet has no "modifier required" wheel mode, so the gesture is rebuilt
+ * here: plain wheel scrolls the page and raises a hint, Ctrl (or Cmd) wheel
+ * zooms. Trackpad pinch arrives as a wheel event with ctrlKey already set,
+ * so it keeps zooming untouched.
+ */
+function CtrlWheelZoom({ onHint }: { onHint: (visible: boolean) => void }) {
+  const map = useMap()
+
+  useEffect(() => {
+    map.scrollWheelZoom.disable()
+
+    const container = map.getContainer()
+    let hideTimer: ReturnType<typeof setTimeout> | undefined
+
+    const onWheel = (event: WheelEvent) => {
+      if (event.ctrlKey || event.metaKey) {
+        // Stop the browser's own page zoom, then hand the gesture to Leaflet.
+        event.preventDefault()
+        onHint(false)
+        clearTimeout(hideTimer)
+        map.setZoomAround(
+          map.mouseEventToContainerPoint(event),
+          map.getZoom() - Math.sign(event.deltaY) * (event.shiftKey ? 3 : 1),
+        )
+        return
+      }
+
+      onHint(true)
+      clearTimeout(hideTimer)
+      hideTimer = setTimeout(() => onHint(false), 1400)
+    }
+
+    container.addEventListener('wheel', onWheel, { passive: false })
+    return () => {
+      clearTimeout(hideTimer)
+      container.removeEventListener('wheel', onWheel)
+    }
+  }, [map, onHint])
+
+  return null
+}
+
 /** Hands the map instance to the overlays rendered outside the container. */
 function MapReady({ onReady }: { onReady: (map: L.Map) => void }) {
   const map = useMap()
@@ -103,10 +153,39 @@ type JobMapProps = {
   onSelect: (offer: Offer) => void
   onBoundsChange: (bounds: Bounds) => void
   focusLocation?: { lat: number; lng: number } | null
+  /** Lets the page hand focus back to a pin when its detail panel closes. */
+  focusRef?: React.RefObject<{ focusMarker: (id: number) => boolean } | null>
 }
 
-export function JobMap({ offers, selected, onSelect, onBoundsChange, focusLocation = null }: JobMapProps) {
+export function JobMap({
+  offers,
+  selected,
+  onSelect,
+  onBoundsChange,
+  focusLocation = null,
+  focusRef,
+}: JobMapProps) {
   const [map, setMap] = useState<L.Map | null>(null)
+  const [showZoomHint, setShowZoomHint] = useState(false)
+  // Leaflet recreates pin elements as they enter and leave the view, so the
+  // lookup is kept live by the markers' own add/remove handlers.
+  const markerElements = useRef(new Map<number, HTMLElement>())
+
+  useImperativeHandle(
+    focusRef,
+    () => ({
+      focusMarker: (id: number) => {
+        const element = markerElements.current.get(id)
+        if (!element?.isConnected) return false
+
+        element.focus({ preventScroll: true })
+        // A detached or hidden pin silently swallows focus, and reporting
+        // success there would strand the reader with nothing selected.
+        return document.activeElement === element
+      },
+    }),
+    [],
+  )
 
   return (
     <div className="relative isolate h-full w-full">
@@ -129,6 +208,7 @@ export function JobMap({ offers, selected, onSelect, onBoundsChange, focusLocati
         />
 
         <MapReady onReady={setMap} />
+        <CtrlWheelZoom onHint={setShowZoomHint} />
         <BoundsWatcher onChange={onBoundsChange} />
         <FocusOffer offer={selected} />
         <FocusLocation location={focusLocation} />
@@ -148,16 +228,50 @@ export function JobMap({ offers, selected, onSelect, onBoundsChange, focusLocati
               keyboard
               eventHandlers={{
                 click: () => onSelect(offer),
+                // Leaflet focuses markers but only fires `keypress` on Enter:
+                // Space is handled on the element so the pin behaves like the
+                // button it reads as.
+                keypress: () => onSelect(offer),
                 add: (e) => {
-                  e.target
-                    .getElement()
-                    ?.setAttribute('aria-label', `Offre : ${offer.title} — ${offer.company}, ${offer.city}`)
+                  const element = e.target.getElement()
+                  if (!element) return
+
+                  markerElements.current.set(offer.id, element)
+                  element.setAttribute(
+                    'aria-label',
+                    `Offre : ${offer.title} — ${offer.company}, ${offer.city}. Appuyez sur Entrée pour l'ouvrir.`,
+                  )
+                  element.addEventListener('keydown', (event: KeyboardEvent) => {
+                    if (event.key !== ' ' && event.key !== 'Spacebar') return
+                    event.preventDefault()
+                    onSelect(offer)
+                  })
+                },
+                remove: () => {
+                  markerElements.current.delete(offer.id)
                 },
               }}
             />
           ))}
         </MarkerClusterGroup>
       </MapContainer>
+
+      {/* Mirrors the map's own hint conventions: an overlay that fades in over
+          the tiles rather than a toast, so it reads as feedback on the gesture. */}
+      <div
+        aria-hidden={!showZoomHint}
+        className={`pointer-events-none absolute inset-0 z-[500] grid place-items-center bg-foreground/45 transition-opacity duration-200 ${
+          showZoomHint ? 'opacity-100' : 'opacity-0'
+        }`}
+      >
+        <p className="rounded-lg px-6 text-center text-lg font-medium text-background md:text-xl">
+          Utilisez {zoomModifierLabel()} + molette pour zoomer sur la carte
+        </p>
+      </div>
+
+      <p role="status" aria-live="polite" className="sr-only">
+        {showZoomHint ? `Utilisez ${zoomModifierLabel()} plus la molette pour zoomer sur la carte.` : ''}
+      </p>
 
       <LocateControl map={map} focusLocation={focusLocation} />
     </div>

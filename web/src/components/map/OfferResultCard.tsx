@@ -16,6 +16,7 @@ export function OfferResultCard({ offer, isSelected, onSelect }: OfferResultCard
     <button
       type="button"
       onClick={onSelect}
+      data-offer-id={offer.id}
       aria-current={isSelected}
       className={cn(
         'w-full rounded-lg border border-l-4 bg-card p-4 text-left transition-colors',
