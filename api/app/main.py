@@ -704,3 +704,40 @@ def get_user_admin(
         jobs=jobs,
         applications=applications,
     )
+
+
+class AdminOfferApplication(BaseModel):
+    id: int
+    job_seeker_id: int
+    applicant_name: str
+    applicant_email: str
+    status: str
+    created_at: datetime
+
+
+@app.get(
+    "/api/admin/offres/{offer_id}/candidatures", response_model=list[AdminOfferApplication]
+)
+def list_offer_applications_admin(
+    offer_id: int, _admin: CurrentAdmin, session: Session = Depends(get_session)
+) -> list[AdminOfferApplication]:
+    get_job_or_404(session, offer_id)
+
+    query = (
+        select(Application)
+        .options(joinedload(Application.job_seeker).joinedload(JobSeeker.user))
+        .where(Application.job_id == offer_id)
+        .order_by(Application.created_at.desc())
+    )
+    applications = session.execute(query).scalars().all()
+    return [
+        AdminOfferApplication(
+            id=a.id,
+            job_seeker_id=a.job_seeker_id,
+            applicant_name=f"{a.job_seeker.first_name} {a.job_seeker.last_name}",
+            applicant_email=a.job_seeker.user.email,
+            status=a.status,
+            created_at=a.created_at,
+        )
+        for a in applications
+    ]
