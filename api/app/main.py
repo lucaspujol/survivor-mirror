@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 from app.db import get_session
 from app.deps import CurrentAdmin, CurrentEmployer, CurrentUser
-from app.models import Employer, Job, Report, User, Warning
+from app.models import Application, Employer, Job, JobSeeker, Report, User, Warning
 
 from app.routers import auth, dashboard
 
@@ -84,10 +84,11 @@ class JobOffer(BaseModel):
     description: str
     contract_type: str
     contract_duration: str | None
-    work_mode: str
-    time_commitment: str
+    work_mode: str  # "on_site", "hybrid", "remote"
+    time_commitment: str  # "full_time", "part_time"
     address: str | None
     city: str
+    # None pour une offre 100% télétravail : pas de lieu de travail géographique.
     lat: float | None
     lng: float | None
     geocoding_source: str | None
@@ -131,6 +132,9 @@ def list_offers(
     east: float | None = None,
     session: Session = Depends(get_session),
 ) -> list[JobOffer]:
+    # Les offres 100% télétravail n'ont pas de position : elles sont exclues
+    # de la carte par construction (isnot(None)), mais restent visibles dans
+    # la liste "Mes offres" de l'employeur.
     query = (
         select(Job)
         .options(joinedload(Job.employer))
@@ -154,6 +158,9 @@ def list_offers_admin(
     result = []
     for job in jobs:
         offer = job_to_offer(job)
+        # Garanti non-None par le filtre `.where(Job.location.isnot(None))`
+        # ci-dessus ; l'assertion prouve cette invariante au vérificateur de
+        # types, qui ne voit que le type déclaré (float | None).
         assert offer.lat is not None and offer.lng is not None
         x, y = to_lambert93(offer.lat, offer.lng)
         result.append(AdminJobOffer(**offer.model_dump(), lambert93_x=x, lambert93_y=y))
@@ -165,11 +172,11 @@ class OfferCreate(BaseModel):
 
     title: str
     description: str
-    contract_type: str
-    contract_duration: str | None = None
-    work_mode: str
-    time_commitment: str
-    address: str | None = None
+    contract_type: str  # "cdi", "cdd", "stage", "alternance", "interim", "freelance"
+    contract_duration: str | None = None  # ex: "3 mois" — pertinent hors CDI
+    work_mode: str  # "on_site", "hybrid", "remote"
+    time_commitment: str  # "full_time", "part_time"
+    address: str | None = None  # obligatoire sauf si work_mode == "remote"
 
     @model_validator(mode="after")
     def address_required_unless_remote(self) -> "OfferCreate":
@@ -187,6 +194,8 @@ def create_offer(
 ) -> JobOffer:
     employer = session.get(Employer, user.id)
     if employer is None:
+        # An employer account always carries its profile row; a missing one
+        # means the account is broken, not that the request is wrong.
         raise HTTPException(status_code=500, detail="Employer profile is missing")
 
     if payload.work_mode == "remote":
@@ -204,6 +213,9 @@ def create_offer(
             location_status="pending",
         )
     else:
+        # Garanti non-None par le validateur `address_required_unless_remote`
+        # ci-dessus ; l'assertion sert juste à le prouver au vérificateur de
+        # types, qui ne voit que le type déclaré (str | None).
         assert payload.address is not None
         try:
             geo = geocode_address(payload.address)
@@ -249,6 +261,9 @@ def get_job_or_404(session: Session, offer_id: int) -> Job:
     return job
 
 def require_owner_or_admin(user, job: Job) -> None:
+    """L'admin modère (peut agir sur toute offre) ; un employeur ne touche
+    qu'à ses propres offres ; personne d'autre n'a le droit.
+    """
     if user.role == "admin":
         return
     if user.role == "employer" and job.employer_id == user.id:
@@ -281,6 +296,9 @@ def update_offer(
         job.time_commitment = payload.time_commitment
 
     if job.work_mode == "remote":
+        # Basculer vers le télétravail efface toute position existante,
+        # même si une adresse a été envoyée dans la même requête : elle
+        # n'aurait plus de sens pour ce mode.
         job.location_address = None
         job.location_city = "Télétravail"
         job.location = None
@@ -301,6 +319,10 @@ def update_offer(
         job.geocoding_score = geo.score
         job.geocoded_at = datetime.now(timezone.utc)
         job.location_status = "geocoded"
+    # NB : passer de "remote" à "on_site"/"hybrid" SANS fournir de nouvelle
+    # adresse dans la même requête laisse l'offre sans position. Pas géré
+    # ici — à traiter côté frontend en rendant l'adresse obligatoire dès que
+    # le mode choisi n'est plus "remote".
 
     session.commit()
     session.refresh(job, attribute_names=["employer"])
@@ -552,3 +574,113 @@ def list_warnings(
         WarningOut(id=w.id, user_id=w.user_id, reason=w.reason, created_at=w.created_at)
         for w in warnings
     ]
+
+
+# --- Admin: single user detail (account page) ---
+
+class AdminUserJobOut(BaseModel):
+    id: int
+    title: str
+    city: str
+    work_mode: str
+    application_count: int
+    created_at: datetime
+
+
+class AdminUserApplicationOut(BaseModel):
+    id: int
+    job_id: int
+    job_title: str
+    company: str
+    city: str
+    status: str
+    created_at: datetime
+
+
+class AdminUserDetail(BaseModel):
+    id: int
+    email: str
+    role: str
+    display_name: str
+    created_at: datetime
+    activity_verified: bool | None
+    jobs: list[AdminUserJobOut]
+    applications: list[AdminUserApplicationOut]
+
+
+@app.get("/api/admin/utilisateurs/{user_id}", response_model=AdminUserDetail)
+def get_user_admin(
+    user_id: int, _admin: CurrentAdmin, session: Session = Depends(get_session)
+) -> AdminUserDetail:
+    user = session.get(
+        User,
+        user_id,
+        options=[joinedload(User.job_seeker), joinedload(User.employer)],
+    )
+    if user is None:
+        raise HTTPException(status_code=404, detail=f"Utilisateur {user_id} introuvable.")
+
+    if user.job_seeker is not None:
+        display_name = f"{user.job_seeker.first_name} {user.job_seeker.last_name}"
+    elif user.employer is not None:
+        display_name = user.employer.company_name
+    else:
+        display_name = user.email
+
+    jobs: list[AdminUserJobOut] = []
+    applications: list[AdminUserApplicationOut] = []
+
+    if user.employer is not None:
+        counts = (
+            select(Application.job_id, func.count(Application.id).label("total"))
+            .group_by(Application.job_id)
+            .subquery()
+        )
+        rows = session.execute(
+            select(Job, func.coalesce(counts.c.total, 0))
+            .outerjoin(counts, counts.c.job_id == Job.id)
+            .where(Job.employer_id == user.id)
+            .order_by(Job.created_at.desc())
+        ).all()
+        jobs = [
+            AdminUserJobOut(
+                id=job.id,
+                title=job.title,
+                city=job.location_city,
+                work_mode=job.work_mode,
+                application_count=count,
+                created_at=job.created_at,
+            )
+            for job, count in rows
+        ]
+
+    if user.job_seeker is not None:
+        apps = session.execute(
+            select(Application)
+            .options(joinedload(Application.job).joinedload(Job.employer))
+            .where(Application.job_seeker_id == user.id)
+            .order_by(Application.created_at.desc())
+        ).scalars().all()
+        applications = [
+            AdminUserApplicationOut(
+                id=application.id,
+                job_id=application.job_id,
+                job_title=application.job.title,
+                company=application.job.employer.company_name,
+                city=application.job.location_city,
+                status=application.status,
+                created_at=application.created_at,
+            )
+            for application in apps
+        ]
+
+    return AdminUserDetail(
+        id=user.id,
+        email=user.email,
+        role=user.role,
+        display_name=display_name,
+        created_at=user.created_at,
+        activity_verified=user.employer.activity_verified if user.employer else None,
+        jobs=jobs,
+        applications=applications,
+    )

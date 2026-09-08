@@ -6,6 +6,7 @@ import { RequireRole } from '@/components/layout/RequireRole'
 import { AccountPage } from '@/pages/AccountPage'
 import { AdminReportDetailPage } from '@/pages/AdminReportDetailPage'
 import { AdminReportsPage } from '@/pages/AdminReportsPage'
+import { AdminUserDetailPage } from '@/pages/AdminUserDetailPage'
 import { AdminUsersPage } from '@/pages/AdminUsersPage'
 import { ApplicationsPage } from '@/pages/ApplicationsPage'
 import { HomePage } from '@/pages/HomePage'
@@ -41,6 +42,7 @@ function App() {
 
         <Route element={<RequireRole roles={['admin']} />}>
           <Route path="admin/utilisateurs" element={<AdminUsersPage />} />
+          <Route path="admin/utilisateurs/:userId" element={<AdminUserDetailPage />} />
           <Route path="admin/signalements" element={<AdminReportsPage />} />
           <Route path="admin/signalements/:offerId" element={<AdminReportDetailPage />} />
         </Route>
