@@ -1,5 +1,11 @@
-import { useEffect, useState } from 'react'
-import { SearchXIcon } from 'lucide-react'
+import { useRef, useState } from 'react'
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronsLeftIcon,
+  ChevronsRightIcon,
+  SearchXIcon,
+} from 'lucide-react'
 import { OfferResultCard } from '@/components/map/OfferResultCard'
 import { Button } from '@/components/ui/button'
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
@@ -12,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 import type { Offer, SortKey } from '@/lib/offers'
 
 const SORT_LABELS: Record<SortKey, string> = {
@@ -20,7 +27,9 @@ const SORT_LABELS: Record<SortKey, string> = {
   city: 'Ville',
 }
 
-const PAGE_SIZE = 10
+const PAGE_SIZE = 6
+/** Numbered buttons around the current page; the rest collapse into ellipses. */
+const PAGE_WINDOW = 1
 
 type OfferResultsProps = {
   offers: Offer[]
@@ -45,14 +54,27 @@ export function OfferResults({
   onShowAll,
   onBackToMapArea,
 }: OfferResultsProps) {
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  const [page, setPage] = useState(1)
+  const listRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE)
-  }, [offers])
+  // A new result set (map move, filter, sort) sends the reader back to page 1;
+  // tracking the list it belongs to resets it during render, without an effect.
+  const [pagedOffers, setPagedOffers] = useState(offers)
+  if (pagedOffers !== offers) {
+    setPagedOffers(offers)
+    setPage(1)
+  }
 
-  const shown = offers.slice(0, visibleCount)
-  const hasMore = visibleCount < offers.length
+  const pageCount = Math.max(1, Math.ceil(offers.length / PAGE_SIZE))
+  // Guards the render between that reset and the state catching up.
+  const currentPage = Math.min(page, pageCount)
+
+  const shown = offers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+
+  const goToPage = (next: number) => {
+    setPage(Math.min(Math.max(next, 1), pageCount))
+    listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   return (
     <section className="flex flex-col gap-3">
@@ -113,7 +135,7 @@ export function OfferResults({
         </Empty>
       ) : (
         <>
-          <div className="flex flex-col gap-3">
+          <div ref={listRef} className="flex flex-col gap-3 scroll-mt-4">
             {shown.map((offer) => (
               <OfferResultCard
                 key={offer.id}
@@ -124,17 +146,113 @@ export function OfferResults({
             ))}
           </div>
 
-          {hasMore && (
-            <Button
-              variant="outline"
-              onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
-              className="self-center"
-            >
-              Charger plus d'offres ({offers.length - shown.length} restantes)
-            </Button>
+          {pageCount > 1 && (
+            <Pagination page={currentPage} pageCount={pageCount} onChange={goToPage} />
           )}
         </>
       )}
     </section>
+  )
+}
+
+/**
+ * Builds the page buttons: first and last are always reachable, the pages
+ * around the current one are listed, and the gaps collapse into ellipses.
+ */
+function pageItems(page: number, pageCount: number): (number | 'gap')[] {
+  const pages = new Set([1, pageCount])
+  for (let offset = -PAGE_WINDOW; offset <= PAGE_WINDOW; offset += 1) {
+    const candidate = page + offset
+    if (candidate >= 1 && candidate <= pageCount) pages.add(candidate)
+  }
+
+  const sorted = [...pages].sort((a, b) => a - b)
+  return sorted.flatMap((value, index) =>
+    index > 0 && value - sorted[index - 1] > 1 ? ['gap' as const, value] : [value],
+  )
+}
+
+type PaginationProps = {
+  page: number
+  pageCount: number
+  onChange: (page: number) => void
+}
+
+function Pagination({ page, pageCount, onChange }: PaginationProps) {
+  return (
+    <nav aria-label="Pagination des offres" className="mt-1 flex justify-center">
+      <ul className="flex flex-wrap items-center gap-1">
+        <li>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Première page"
+            disabled={page === 1}
+            onClick={() => onChange(1)}
+          >
+            <ChevronsLeftIcon />
+          </Button>
+        </li>
+        <li>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Page précédente"
+            disabled={page === 1}
+            onClick={() => onChange(page - 1)}
+          >
+            <ChevronLeftIcon />
+          </Button>
+        </li>
+
+        {pageItems(page, pageCount).map((item, index) =>
+          item === 'gap' ? (
+            <li key={`gap-${index}`} aria-hidden className="px-1 text-muted-foreground">
+              …
+            </li>
+          ) : (
+            <li key={item}>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Page ${item}`}
+                aria-current={item === page ? 'page' : undefined}
+                onClick={() => onChange(item)}
+                className={cn(
+                  'font-medium',
+                  item === page &&
+                    'border-b-2 border-primary text-primary rounded-b-none hover:bg-transparent',
+                )}
+              >
+                {item}
+              </Button>
+            </li>
+          ),
+        )}
+
+        <li>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Page suivante"
+            disabled={page === pageCount}
+            onClick={() => onChange(page + 1)}
+          >
+            <ChevronRightIcon />
+          </Button>
+        </li>
+        <li>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Dernière page"
+            disabled={page === pageCount}
+            onClick={() => onChange(pageCount)}
+          >
+            <ChevronsRightIcon />
+          </Button>
+        </li>
+      </ul>
+    </nav>
   )
 }
