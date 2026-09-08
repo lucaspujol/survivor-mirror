@@ -37,6 +37,13 @@ services:
       JWT_SECRET: demo-only-not-a-real-secret
       JWT_EXPIRE_DAYS: 7
       COOKIE_SECURE: false
+      UPLOADS_DIR: /app/uploads
+    volumes:
+      # The CVs and cover letters attached to an application live on disk, not
+      # in the database. Without this volume they would sit in the container's
+      # writable layer and vanish on the first `docker compose down`, leaving
+      # the applications pointing at files that no longer exist.
+      - demo_api_uploads:/app/uploads
     ports:
       - "8000:8000"
     depends_on:
@@ -65,3 +72,4 @@ services:
 
 volumes:
   demo_db_data:
+  demo_api_uploads:
