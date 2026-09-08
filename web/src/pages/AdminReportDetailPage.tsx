@@ -59,6 +59,22 @@ type Report = {
   created_at: string
 }
 
+type OfferApplication = {
+  id: number
+  job_seeker_id: number
+  applicant_name: string
+  applicant_email: string
+  status: string
+  created_at: string
+}
+
+const applicationStatusLabels: Record<string, string> = {
+  sent: 'Envoyée',
+  under_review: "En cours d'examen",
+  accepted: 'Acceptée',
+  rejected: 'Refusée',
+}
+
 function labelOf(options: { value: string; label: string }[], value: string): string {
   return options.find((option) => option.value === value)?.label ?? value
 }
@@ -75,6 +91,9 @@ export function AdminReportDetailPage() {
 
   const offerResource = useApiResource<OfferDetail>(`/api/admin/offres/${offerId}`)
   const reportsResource = useApiResource<Report[]>(`/api/admin/signalements?job_id=${offerId}`)
+  const applicationsResource = useApiResource<OfferApplication[]>(
+    `/api/admin/offres/${offerId}/candidatures`,
+  )
 
   const [reports, setReports] = useState<Report[]>([])
   useEffect(() => {
@@ -194,7 +213,13 @@ export function AdminReportDetailPage() {
               <p className="text-sm">{offerResource.data.description}</p>
 
               <p className="text-sm text-muted-foreground">
-                {offerResource.data.company} — {offerResource.data.employer_email}
+                <Link
+                  to={`/admin/utilisateurs/${offerResource.data.employer_id}`}
+                  className="underline underline-offset-4 hover:text-primary"
+                >
+                  {offerResource.data.company}
+                </Link>
+                {' '}— {offerResource.data.employer_email}
               </p>
               <p className="text-sm text-muted-foreground">
                 {offerResource.data.address ?? offerResource.data.city}
@@ -343,6 +368,49 @@ export function AdminReportDetailPage() {
                           Signalé par {report.reporter_email} le{' '}
                           {dateFormat.format(new Date(report.created_at))}
                         </p>
+                      </CardContent>
+                    </Card>
+                  </li>
+                ))}
+              </ul>
+            ))}
+        </div>
+
+        <div>
+          <h2 className="mb-3 text-lg font-semibold">
+            Candidatures reçues
+            {applicationsResource.status === 'ready' && ` (${applicationsResource.data.length})`}
+          </h2>
+
+          {applicationsResource.status === 'loading' && <PageLoading rows={2} />}
+          {applicationsResource.status === 'error' && (
+            <PageError message={applicationsResource.error} />
+          )}
+
+          {applicationsResource.status === 'ready' &&
+            (applicationsResource.data.length === 0 ? (
+              <PageEmpty title="Aucune candidature reçue pour cette offre." />
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {applicationsResource.data.map((application) => (
+                  <li key={application.id}>
+                    <Card>
+                      <CardContent className="flex flex-wrap items-center justify-between gap-2 pt-6">
+                        <div>
+                          <Link
+                            to={`/admin/utilisateurs/${application.job_seeker_id}`}
+                            className="font-medium underline underline-offset-4 hover:text-primary"
+                          >
+                            {application.applicant_name}
+                          </Link>
+                          <p className="text-sm text-muted-foreground">
+                            {application.applicant_email} · envoyée le{' '}
+                            {dateFormat.format(new Date(application.created_at))}
+                          </p>
+                        </div>
+                        <Badge variant="outline">
+                          {applicationStatusLabels[application.status] ?? application.status}
+                        </Badge>
                       </CardContent>
                     </Card>
                   </li>
