@@ -22,7 +22,7 @@ hors de `web/public/`, donc plus servis par l'application.
 | --- | --- | --- |
 | En-tête de la barre latérale | `logo-de-la-republique-francaise.png` + « Ministère du Job et du Bonheur » + « Liberté / Égalité / Fraternité » | Mot-symbole typographique « GéoEmploi » + « Démonstrateur technique » |
 | Barre latérale repliée | Drapeau tricolore | Lettre « C » en typographie |
-| Favicon | `favicon.jpg` (Marianne tricolore) | `favicon.svg` (marque neutre violette) |
+| Favicon | `favicon.jpg` (Marianne tricolore) | `favicon.png` |
 | Titre d'onglet | « GéoEmploi » | « GéoEmploi — démonstrateur technique » |
 | Typographie globale | Marianne (5 `@font-face`, `--font-heading`, `--font-sans`) | Geist Variable |
 | Couleur primaire | `#1B3A6B` (`--primary`, `--ring`, `--sidebar-primary`, `--chart-1..5`, `--color-institutional`) | `#863BFF` (`--color-brand`) |

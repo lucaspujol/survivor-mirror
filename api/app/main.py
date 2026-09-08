@@ -9,11 +9,12 @@ from pydantic import BaseModel, model_validator
 from pyproj import Transformer
 from shapely.geometry import Point
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 from app.archival import archival_cutoff
 from app.db import get_session
 from app.deps import CurrentAdmin, CurrentEmployer, CurrentUser
-from app.models import Application, Employer, Job
+from app.models import Application, Employer, Job, Report, User, Warning
 
 from app import storage
 from app.routers import applications, auth, dashboard
@@ -95,10 +96,6 @@ class JobOffer(BaseModel):
     geocoding_source: str | None
     geocoding_score: float | None
     geocoding_date: date | None
-    # The frontend types both as required: without them every "Publiée il y
-    # a..." / "Expire dans X j" label renders NaN.
-    created_at: datetime
-    employer_id: int
 
 class AdminJobOffer(JobOffer):
     lambert93_x: float | None
@@ -127,8 +124,6 @@ def job_to_offer(job: Job) -> JobOffer:
         geocoding_source=job.geocoding_source,
         geocoding_score=job.geocoding_score,
         geocoding_date=job.geocoded_at.date() if job.geocoded_at else None,
-        created_at=job.created_at,
-        employer_id=job.employer_id,
     )
 
 @app.get("/api/offres", response_model=list[JobOffer])
@@ -340,3 +335,240 @@ def delete_offer(
 
     for application_id in application_ids:
         storage.delete_application_files(application_id)
+
+
+# --- Offer reporting ---
+# Restricted to signed-in accounts (seeker or employer), to limit abuse.
+# An account can only report a given offer once: the unique constraint in
+# the database is what actually enforces this, not a client-side check,
+# which could always be bypassed by calling the API directly.
+
+class ReportCreate(BaseModel):
+    reason: str  # "fraudulent", "non_compliant", "expired", "other"
+    comment: str | None = None
+
+
+@app.post("/api/offres/{offer_id}/signalements", status_code=201)
+def report_offer(
+    offer_id: int,
+    payload: ReportCreate,
+    current_user: CurrentUser,
+    session: Session = Depends(get_session),
+) -> dict[str, str]:
+    get_job_or_404(session, offer_id)  # clean 404 rather than an obscure FK constraint violation
+
+    report = Report(
+        job_id=offer_id,
+        reporter_id=current_user.id,
+        reason=payload.reason,
+        comment=payload.comment,
+    )
+    session.add(report)
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(
+            status_code=409, detail="Vous avez déjà signalé cette offre."
+        )
+    return {"status": "ok"}
+
+
+class ReportOut(BaseModel):
+    id: int
+    job_id: int
+    job_title: str
+    reason: str
+    comment: str | None
+    status: str
+    reporter_email: str
+    created_at: datetime
+
+
+@app.get("/api/admin/signalements", response_model=list[ReportOut])
+def list_reports(
+    _admin: CurrentAdmin,
+    job_id: int | None = None,
+    session: Session = Depends(get_session),
+) -> list[ReportOut]:
+    query = (
+        select(Report)
+        .options(joinedload(Report.job), joinedload(Report.reporter))
+        .order_by(Report.created_at.desc())
+    )
+    if job_id is not None:
+        query = query.where(Report.job_id == job_id)
+
+    reports = session.execute(query).scalars().all()
+    return [
+        ReportOut(
+            id=r.id,
+            job_id=r.job_id,
+            job_title=r.job.title,
+            reason=r.reason,
+            comment=r.comment,
+            status=r.status,
+            reporter_email=r.reporter.email,
+            created_at=r.created_at,
+        )
+        for r in reports
+    ]
+
+
+# --- Offer moderation (admin) ---
+
+class AdminOfferDetail(BaseModel):
+    id: int
+    title: str
+    description: str
+    contract_type: str
+    contract_duration: str | None
+    work_mode: str
+    time_commitment: str
+    address: str | None
+    city: str
+    lat: float | None
+    lng: float | None
+    employer_id: int
+    employer_email: str
+    company: str
+    created_at: datetime
+
+
+@app.get("/api/admin/offres/{offer_id}", response_model=AdminOfferDetail)
+def get_offer_admin(
+    offer_id: int, _admin: CurrentAdmin, session: Session = Depends(get_session)
+) -> AdminOfferDetail:
+    job = session.execute(
+        select(Job)
+        .options(joinedload(Job.employer).joinedload(Employer.user))
+        .where(Job.id == offer_id)
+    ).scalar_one_or_none()
+    if job is None:
+        raise HTTPException(status_code=404, detail=f"Offre {offer_id} introuvable.")
+
+    lat, lng = (None, None)
+    if job.location is not None:
+        point = cast(Point, to_shape(job.location))
+        lat, lng = point.y, point.x
+
+    return AdminOfferDetail(
+        id=job.id,
+        title=job.title,
+        description=job.description,
+        contract_type=job.contract_type,
+        contract_duration=job.contract_duration,
+        work_mode=job.work_mode,
+        time_commitment=job.time_commitment,
+        address=job.location_address,
+        city=job.location_city,
+        lat=lat,
+        lng=lng,
+        employer_id=job.employer.user_id,
+        employer_email=job.employer.user.email,
+        company=job.employer.company_name,
+        created_at=job.created_at,
+    )
+
+
+class ReportStatusUpdate(BaseModel):
+    status: str  # "pending", "reviewed", "dismissed"
+
+
+@app.patch("/api/admin/signalements/{report_id}", response_model=ReportOut)
+def update_report_status(
+    report_id: int,
+    payload: ReportStatusUpdate,
+    _admin: CurrentAdmin,
+    session: Session = Depends(get_session),
+) -> ReportOut:
+    report = session.get(Report, report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail=f"Signalement {report_id} introuvable.")
+
+    report.status = payload.status
+    session.commit()
+    session.refresh(report, attribute_names=["job", "reporter"])
+
+    return ReportOut(
+        id=report.id,
+        job_id=report.job_id,
+        job_title=report.job.title,
+        reason=report.reason,
+        comment=report.comment,
+        status=report.status,
+        reporter_email=report.reporter.email,
+        created_at=report.created_at,
+    )
+
+
+@app.delete("/api/admin/utilisateurs/{user_id}", status_code=204)
+def delete_user_admin(
+    user_id: int, _admin: CurrentAdmin, session: Session = Depends(get_session)
+) -> None:
+    target = session.get(User, user_id)
+    if target is None:
+        raise HTTPException(status_code=404, detail=f"Utilisateur {user_id} introuvable.")
+    if target.role == "admin":
+        # Guards against locking the platform out of every admin account by mistake.
+        raise HTTPException(
+            status_code=403,
+            detail="Impossible de supprimer un compte administrateur depuis cet écran.",
+        )
+    session.delete(target)
+    session.commit()
+
+
+class WarningCreate(BaseModel):
+    reason: str
+
+
+class WarningOut(BaseModel):
+    id: int
+    user_id: int
+    reason: str
+    created_at: datetime
+
+
+@app.post(
+    "/api/admin/utilisateurs/{user_id}/avertissements",
+    response_model=WarningOut,
+    status_code=201,
+)
+def warn_user(
+    user_id: int,
+    payload: WarningCreate,
+    current_admin: CurrentAdmin,
+    session: Session = Depends(get_session),
+) -> WarningOut:
+    target = session.get(User, user_id)
+    if target is None:
+        raise HTTPException(status_code=404, detail=f"Utilisateur {user_id} introuvable.")
+
+    warning = Warning(user_id=user_id, issued_by=current_admin.id, reason=payload.reason)
+    session.add(warning)
+    session.commit()
+    session.refresh(warning)
+
+    return WarningOut(
+        id=warning.id,
+        user_id=warning.user_id,
+        reason=warning.reason,
+        created_at=warning.created_at,
+    )
+
+
+@app.get("/api/admin/utilisateurs/{user_id}/avertissements", response_model=list[WarningOut])
+def list_warnings(
+    user_id: int, _admin: CurrentAdmin, session: Session = Depends(get_session)
+) -> list[WarningOut]:
+    query = (
+        select(Warning)
+        .where(Warning.user_id == user_id)
+        .order_by(Warning.created_at.desc())
+    )
+    warnings = session.execute(query).scalars().all()
+    return [
+        WarningOut(id=w.id, user_id=w.user_id, reason=w.reason, created_at=w.created_at)
+        for w in warnings
+    ]
