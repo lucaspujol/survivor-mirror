@@ -11,8 +11,7 @@ hors de `web/public/`, donc aucun de ces fichiers n'est accessible par URL.
 | --- | --- |
 | `logo-de-la-republique-francaise.png` | bloc-marque de l'en-tête de la barre latérale (`app-sidebar.tsx`) |
 | `ministere-job-et-bonheur.png` | non référencé dans le code au moment du retrait |
-| `favicon-marianne.jpg` | favicon déclaré dans `web/index.html` (Marianne tricolore) |
-| `Marianne_2022/` | fonte Marianne, chargée par cinq `@font-face` dans `web/src/index.css` |
+| `favicon.png` | favicon déclaré dans `web/index.html` |
 
 Pour un éventuel rétablissement : `git log --follow` sur ces fichiers, et le
 commit de retrait contient le diff exact des interfaces.
