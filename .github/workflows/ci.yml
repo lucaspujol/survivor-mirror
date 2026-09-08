@@ -80,13 +80,13 @@ jobs:
 
       - name: Only the expected objects are created
         run: |
-          tables=$(docker compose exec -T db psql -U chomagego -d chomagego -tAc \
+          tables=$(docker compose exec -T db psql -U geoemploi -d geoemploi -tAc \
             "SELECT string_agg(tablename, ',' ORDER BY tablename) FROM pg_tables WHERE schemaname = 'public';")
           echo "public tables: $tables"
           expected="alembic_version,applications,employers,job_seekers,jobs,spatial_ref_sys,users"
           [ "$tables" = "$expected" ] || { echo "expected: $expected" >&2; exit 1; }
 
-          extensions=$(docker compose exec -T db psql -U chomagego -d chomagego -tAc \
+          extensions=$(docker compose exec -T db psql -U geoemploi -d geoemploi -tAc \
             "SELECT string_agg(extname, ',' ORDER BY extname) FROM pg_extension;")
           echo "extensions: $extensions"
           [ "$extensions" = "plpgsql,postgis" ] || { echo "expected: plpgsql,postgis" >&2; exit 1; }
@@ -104,7 +104,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      BUNDLE: build/chomagego-demo-build
+      BUNDLE: build/geoemploi-demo-build
     steps:
       - uses: actions/checkout@v4
 
@@ -132,7 +132,7 @@ jobs:
           ! grep -q '/src/main.tsx' "$BUNDLE/web/dist/index.html"
 
       - name: Start the demo stack from the bundle
-        working-directory: build/chomagego-demo-build
+        working-directory: build/geoemploi-demo-build
         run: docker compose up -d --build
 
       - name: The application answers
@@ -151,13 +151,13 @@ jobs:
         run: ./scripts/smoke-demo-stack.sh http://localhost:8080
 
       - name: Migrations are applied and match the models
-        working-directory: build/chomagego-demo-build
+        working-directory: build/geoemploi-demo-build
         run: |
           docker compose exec -T api alembic current
           docker compose exec -T api alembic check
 
       - name: The seed is idempotent
-        working-directory: build/chomagego-demo-build
+        working-directory: build/geoemploi-demo-build
         run: |
           before=$(curl -sf http://localhost:8080/api/offres | jq 'length')
           docker compose exec -T api python -m app.seed
@@ -167,14 +167,14 @@ jobs:
 
       - name: Dump logs on failure
         if: failure()
-        working-directory: build/chomagego-demo-build
+        working-directory: build/geoemploi-demo-build
         run: docker compose logs
 
       - name: Publish the demo build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: chomagego-demo-build
-          path: build/chomagego-demo-build
+          name: geoemploi-demo-build
+          path: build/geoemploi-demo-build
           # Without this the action silently drops dotfiles, and the published
           # bundle would no longer match what the build script produces.
           include-hidden-files: true
@@ -183,7 +183,7 @@ jobs:
 
       - name: Tear down
         if: always()
-        working-directory: build/chomagego-demo-build
+        working-directory: build/geoemploi-demo-build
         run: docker compose down -v
 
   artifact-check:
@@ -204,16 +204,16 @@ jobs:
       - name: Download the published artifact into a clean directory
         uses: actions/download-artifact@v4
         with:
-          name: chomagego-demo-build
-          path: downloaded/chomagego-demo-build
+          name: geoemploi-demo-build
+          path: downloaded/geoemploi-demo-build
 
       - name: What was downloaded
         run: |
           find downloaded -maxdepth 3 -not -path '*/dist/assets/*' | sort
-          du -sh downloaded/chomagego-demo-build
+          du -sh downloaded/geoemploi-demo-build
 
       - name: Start the stack from the downloaded artifact
-        working-directory: downloaded/chomagego-demo-build
+        working-directory: downloaded/geoemploi-demo-build
         run: docker compose up -d --build
 
       - name: The application answers
@@ -233,10 +233,10 @@ jobs:
 
       - name: Dump logs on failure
         if: failure()
-        working-directory: downloaded/chomagego-demo-build
+        working-directory: downloaded/geoemploi-demo-build
         run: docker compose logs
 
       - name: Tear down
         if: always()
-        working-directory: downloaded/chomagego-demo-build
+        working-directory: downloaded/geoemploi-demo-build
         run: docker compose down -v

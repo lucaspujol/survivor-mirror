@@ -68,6 +68,24 @@ function FocusOffer({ offer }: { offer: Offer | null }) {
   return null
 }
 
+/**
+ * Centres the map on a geocoded search location (the "zone géographique"
+ * field), independently of offer selection — reusing the same fly-to
+ * mechanism as FocusOffer.
+ */
+function FocusLocation({ location }: { location: { lat: number; lng: number } | null }) {
+  const map = useMap()
+
+  useEffect(() => {
+    if (!location) return
+    map.flyTo([location.lat, location.lng], Math.max(map.getZoom(), FOCUS_ZOOM), {
+      duration: 0.6,
+    })
+  }, [map, location])
+
+  return null
+}
+
 /** Hands the map instance to the overlays rendered outside the container. */
 function MapReady({ onReady }: { onReady: (map: L.Map) => void }) {
   const map = useMap()
@@ -84,9 +102,10 @@ type JobMapProps = {
   selected: Offer | null
   onSelect: (offer: Offer) => void
   onBoundsChange: (bounds: Bounds) => void
+  focusLocation?: { lat: number; lng: number } | null
 }
 
-export function JobMap({ offers, selected, onSelect, onBoundsChange }: JobMapProps) {
+export function JobMap({ offers, selected, onSelect, onBoundsChange, focusLocation = null }: JobMapProps) {
   const [map, setMap] = useState<L.Map | null>(null)
 
   return (
@@ -112,6 +131,7 @@ export function JobMap({ offers, selected, onSelect, onBoundsChange }: JobMapPro
         <MapReady onReady={setMap} />
         <BoundsWatcher onChange={onBoundsChange} />
         <FocusOffer offer={selected} />
+        <FocusLocation location={focusLocation} />
 
         <MarkerClusterGroup
           chunkedLoading
@@ -125,13 +145,21 @@ export function JobMap({ offers, selected, onSelect, onBoundsChange }: JobMapPro
               position={[offer.lat, offer.lng]}
               icon={offer.id === selected?.id ? selectedOfferIcon : offerIcon}
               zIndexOffset={offer.id === selected?.id ? 1000 : 0}
-              eventHandlers={{ click: () => onSelect(offer) }}
+              keyboard
+              eventHandlers={{
+                click: () => onSelect(offer),
+                add: (e) => {
+                  e.target
+                    .getElement()
+                    ?.setAttribute('aria-label', `Offre : ${offer.title} — ${offer.company}, ${offer.city}`)
+                },
+              }}
             />
           ))}
         </MarkerClusterGroup>
       </MapContainer>
 
-      <LocateControl map={map} />
+      <LocateControl map={map} focusLocation={focusLocation} />
     </div>
   )
 }

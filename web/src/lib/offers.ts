@@ -58,8 +58,6 @@ export function publishedLabel(iso: string): string {
 export type OfferFilters = {
   /** Free text matched against the title, the company and the description. */
   query: string
-  /** Free text matched against the city and the address. */
-  location: string
   /** Selected contract types; empty means no restriction. */
   contractTypes: string[]
   /** Selected windows, in days since publication; empty means no restriction. */
@@ -72,7 +70,6 @@ export type OfferFilters = {
 
 export const EMPTY_FILTERS: OfferFilters = {
   query: '',
-  location: '',
   contractTypes: [],
   periods: [],
   workModes: [],
@@ -89,14 +86,6 @@ function matchesQuery(offer: Offer, query: string): boolean {
   const needle = query.trim().toLowerCase()
   if (!needle) return true
   return [offer.title, offer.company, offer.description].some((field) =>
-    field.toLowerCase().includes(needle),
-  )
-}
-
-function matchesLocation(offer: Offer, location: string): boolean {
-  const needle = location.trim().toLowerCase()
-  if (!needle) return true
-  return [offer.city, offer.address ?? ''].some((field) =>
     field.toLowerCase().includes(needle),
   )
 }
@@ -119,7 +108,6 @@ function matchesTimeCommitments(offer: Offer, timeCommitments: string[]): boolea
 export function matchesFilters(offer: Offer, filters: OfferFilters): boolean {
   return (
     matchesQuery(offer, filters.query) &&
-    matchesLocation(offer, filters.location) &&
     (filters.contractTypes.length === 0 ||
       filters.contractTypes.includes(offer.contract_type)) &&
     matchesPeriods(offer, filters.periods) &&

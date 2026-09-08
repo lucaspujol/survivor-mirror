@@ -16,15 +16,16 @@ function pinIcon(fill: string, scale: number, className: string) {
   })
 }
 
-export const offerIcon = pinIcon('#863bff', 1, '')
+export const offerIcon = pinIcon('#863BFF', 1, '')
 export const selectedOfferIcon = pinIcon('#b8341f', 1.25, 'geo-marker--selected')
 
 export function clusterIcon(cluster: L.MarkerCluster) {
   const count = cluster.getChildCount()
   const size = count < 10 ? 34 : count < 100 ? 40 : 48
+  const label = `Groupe de ${count} offre${count > 1 ? 's' : ''}, appuyez sur Entrée pour zoomer`
 
   return L.divIcon({
-    html: `<div class="geo-cluster" style="width:${size}px;height:${size}px;font-size:${
+    html: `<div class="geo-cluster" aria-label="${label}" style="width:${size}px;height:${size}px;font-size:${
       size / 3
     }px">${count}</div>`,
     className: '',

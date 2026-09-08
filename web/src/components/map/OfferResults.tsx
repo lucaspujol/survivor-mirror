@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react'
 import { SearchXIcon } from 'lucide-react'
 import { OfferResultCard } from '@/components/map/OfferResultCard'
+import { Button } from '@/components/ui/button'
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { Label } from '@/components/ui/label'
 import {
@@ -18,6 +20,8 @@ const SORT_LABELS: Record<SortKey, string> = {
   city: 'Ville',
 }
 
+const PAGE_SIZE = 10
+
 type OfferResultsProps = {
   offers: Offer[]
   isLoading: boolean
@@ -25,6 +29,9 @@ type OfferResultsProps = {
   onSortChange: (sort: SortKey) => void
   selectedId: number | null
   onSelect: (offer: Offer) => void
+  showingAll: boolean
+  onShowAll: () => void
+  onBackToMapArea: () => void
 }
 
 export function OfferResults({
@@ -34,13 +41,37 @@ export function OfferResults({
   onSortChange,
   selectedId,
   onSelect,
+  showingAll,
+  onShowAll,
+  onBackToMapArea,
 }: OfferResultsProps) {
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE)
+  }, [offers])
+
+  const shown = offers.slice(0, visibleCount)
+  const hasMore = visibleCount < offers.length
+
   return (
     <section className="flex flex-col gap-3">
-      <p className="text-sm text-muted-foreground">
-        {offers.length} offre{offers.length > 1 ? 's' : ''} consultable
-        {offers.length > 1 ? 's' : ''} dans la zone affichée
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground">
+          {offers.length} offre{offers.length > 1 ? 's' : ''} consultable
+          {offers.length > 1 ? 's' : ''} {showingAll ? 'au total' : 'dans la zone affichée'}
+        </p>
+
+        {showingAll ? (
+          <Button variant="outline" size="sm" onClick={onBackToMapArea}>
+            Revenir aux offres de la zone affichée
+          </Button>
+        ) : (
+          <Button variant="outline" size="sm" onClick={onShowAll}>
+            Voir toutes les offres
+          </Button>
+        )}
+      </div>
 
       <div className="flex items-center gap-3 rounded-lg bg-muted px-3 py-2">
         <Label htmlFor="sort" className="shrink-0 font-medium">
@@ -74,21 +105,35 @@ export function OfferResults({
             </EmptyMedia>
             <EmptyTitle>Aucune offre ici</EmptyTitle>
             <EmptyDescription>
-              Déplacez la carte, élargissez la zone ou retirez des filtres.
+              {showingAll
+                ? 'Retirez des filtres pour voir plus de résultats.'
+                : 'Déplacez la carte, élargissez la zone, retirez des filtres, ou consultez toutes les offres.'}
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (
-        <div className="flex flex-col gap-3">
-          {offers.map((offer) => (
-            <OfferResultCard
-              key={offer.id}
-              offer={offer}
-              isSelected={offer.id === selectedId}
-              onSelect={() => onSelect(offer)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="flex flex-col gap-3">
+            {shown.map((offer) => (
+              <OfferResultCard
+                key={offer.id}
+                offer={offer}
+                isSelected={offer.id === selectedId}
+                onSelect={() => onSelect(offer)}
+              />
+            ))}
+          </div>
+
+          {hasMore && (
+            <Button
+              variant="outline"
+              onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
+              className="self-center"
+            >
+              Charger plus d'offres ({offers.length - shown.length} restantes)
+            </Button>
+          )}
+        </>
       )}
     </section>
   )

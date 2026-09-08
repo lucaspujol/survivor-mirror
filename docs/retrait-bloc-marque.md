@@ -6,7 +6,7 @@ hors de `web/public/`, donc plus servis par l'application.
 
 ## Identité retenue (les trois lignes demandées)
 
-1. **Nom** : « ChômageGo » en typographie seule, sans bloc-marque, sans Marianne,
+1. **Nom** : « GéoEmploi » en typographie seule, sans bloc-marque, sans Marianne,
    sans mention « Ministère » — c'est le nom déjà porté par l'interface (titre
    d'onglet, page de connexion), donc aucun écran ne change de nom.
 2. **Typographie** : Geist Variable, déjà présente dans les dépendances
@@ -20,10 +20,10 @@ hors de `web/public/`, donc plus servis par l'application.
 
 | Endroit | Avant | Après |
 | --- | --- | --- |
-| En-tête de la barre latérale | `logo-de-la-republique-francaise.png` + « Ministère du Job et du Bonheur » + « Liberté / Égalité / Fraternité » | Mot-symbole typographique « ChômageGo » + « Démonstrateur technique » |
+| En-tête de la barre latérale | `logo-de-la-republique-francaise.png` + « Ministère du Job et du Bonheur » + « Liberté / Égalité / Fraternité » | Mot-symbole typographique « GéoEmploi » + « Démonstrateur technique » |
 | Barre latérale repliée | Drapeau tricolore | Lettre « C » en typographie |
 | Favicon | `favicon.jpg` (Marianne tricolore) | `favicon.svg` (marque neutre violette) |
-| Titre d'onglet | « ChômageGo » | « ChômageGo — démonstrateur technique » |
+| Titre d'onglet | « GéoEmploi » | « GéoEmploi — démonstrateur technique » |
 | Typographie globale | Marianne (5 `@font-face`, `--font-heading`, `--font-sans`) | Geist Variable |
 | Couleur primaire | `#1B3A6B` (`--primary`, `--ring`, `--sidebar-primary`, `--chart-1..5`, `--color-institutional`) | `#863BFF` (`--color-brand`) |
 | Marqueur de carte | `job-marker.svg` en `#1B3A6B` | `#863BFF` |

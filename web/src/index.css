@@ -7,7 +7,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --color-brand: #863bff;
+    --color-brand: #863BFF;
     --font-heading: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
     --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
     --color-sidebar-ring: var(--sidebar-ring);
@@ -57,8 +57,6 @@
     --card-foreground: oklch(0.16 0.012 293.4);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.16 0.012 293.4);
-    /* #863BFF. Produit non institutionnel : la teinte est volontairement
-       éloignée du bleu de l'État. */
     --primary: oklch(0.568 0.264 293.4);
     --primary-foreground: oklch(0.985 0 0);
     --secondary: oklch(0.966 0.012 293.4);
