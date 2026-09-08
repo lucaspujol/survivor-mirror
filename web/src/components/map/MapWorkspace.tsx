@@ -180,7 +180,7 @@ export function MapWorkspace() {
 
           {selected ? (
             <div className="rounded-xl border bg-card">
-              <OfferDetail offer={selected} onBack={() => setSelected(null)} />
+              <OfferDetail key={selected.id} offer={selected} onBack={() => setSelected(null)} />
             </div>
           ) : (
             <OfferResults

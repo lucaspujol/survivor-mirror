@@ -10,7 +10,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { useAuth, type Role } from '@/lib/auth'
-import { BriefcaseIcon, FileTextIcon, MapIcon, UsersIcon } from 'lucide-react'
+import { BriefcaseIcon, FileTextIcon, FlagIcon, MapIcon, UsersIcon } from 'lucide-react'
 
 const mapItem: NavItem = { title: 'Carte', url: '/', icon: <MapIcon /> }
 
@@ -24,12 +24,9 @@ const roleItems: Record<Role, NavItem[]> = {
 
 const adminItems: NavItem[] = [
   { title: 'Utilisateurs', url: '/admin/utilisateurs', icon: <UsersIcon /> },
+  { title: 'Signalements', url: '/admin/signalements', icon: <FlagIcon /> },
 ]
 
-/**
- * Identité neutre : le nom du produit en typographie, sans bloc-marque.
- * Aucun visuel de l'État, conformément au gel du 7 septembre 2026.
- */
 function SidebarBrand() {
   const { state } = useSidebar()
   const isCollapsed = state === 'collapsed'
