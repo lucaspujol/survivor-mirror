@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, EmailStr, Field
@@ -45,6 +45,17 @@ class UserOut(BaseModel):
     created_at: datetime
 
 
+class ApplicationDocumentOut(BaseModel):
+    """A file attached to an application, without its content: the bytes are
+    served by the dedicated download endpoint."""
+
+    id: int
+    kind: str
+    original_name: str
+    mime_type: str
+    size_bytes: int
+
+
 class SeekerApplicationOut(BaseModel):
     """One row of the job seeker's applications screen."""
 
@@ -56,6 +67,51 @@ class SeekerApplicationOut(BaseModel):
     status: str
     created_at: datetime
     updated_at: datetime
+
+
+class SeekerApplicationDetailOut(SeekerApplicationOut):
+    """Everything the job seeker sent, replayed on the application's detail
+    screen: their contact details, their message and their documents."""
+
+    first_name: str
+    last_name: str
+    phone: str | None
+    message: str | None
+    contract_type: str
+    work_mode: str
+    address: str | None
+    job_description: str
+    documents: list[ApplicationDocumentOut]
+
+
+class EmployerApplicantOut(BaseModel):
+    """One candidate who applied to one of the employer's offers.
+
+    Carries the contact details the candidate chose to share on the form, plus
+    the account email so the employer can always answer.
+    """
+
+    id: int
+    job_id: int
+    job_title: str
+    status: str
+    first_name: str
+    last_name: str
+    email: str
+    phone: str | None
+    message: str | None
+    skills: list[str]
+    experience: str | None
+    availability: date | None
+    documents: list[ApplicationDocumentOut]
+    created_at: datetime
+    updated_at: datetime
+
+
+class ApplicationStatusIn(BaseModel):
+    """Employer's decision on one application."""
+
+    status: Literal["sent", "under_review", "accepted", "rejected"]
 
 
 class EmployerOfferOut(BaseModel):

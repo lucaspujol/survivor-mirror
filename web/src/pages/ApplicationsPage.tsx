@@ -1,42 +1,14 @@
+import { ApplicationDetailDialog } from '@/components/applications/ApplicationDetailDialog'
 import { PageEmpty, PageError, PageLoading } from '@/components/PageState'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PageShell } from '@/components/layout/PageShell'
 import { useApiResource } from '@/hooks/use-api-resource'
-
-type Application = {
-  id: number
-  job_id: number
-  job_title: string
-  company: string
-  city: string
-  status: 'sent' | 'under_review' | 'accepted' | 'rejected'
-  created_at: string
-  updated_at: string
-}
-
-const statusLabels: Record<Application['status'], string> = {
-  sent: 'Envoyée',
-  under_review: "En cours d'examen",
-  accepted: 'Acceptée',
-  rejected: 'Refusée',
-}
-
-const statusStyles: Record<Application['status'], string> = {
-  sent: 'bg-muted text-muted-foreground',
-  under_review: 'bg-amber-100 text-amber-900',
-  accepted: 'bg-emerald-100 text-emerald-900',
-  rejected: 'bg-destructive/10 text-destructive',
-}
-
-const dateFormat = new Intl.DateTimeFormat('fr-FR', {
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-})
-
-function formatDate(iso: string) {
-  return dateFormat.format(new Date(iso))
-}
+import {
+  STATUS_LABELS,
+  STATUS_STYLES,
+  formatDate,
+  type Application,
+} from '@/lib/applications'
 
 export function ApplicationsPage() {
   const { status, data, error } = useApiResource<Application[]>('/api/candidatures')
@@ -69,11 +41,14 @@ export function ApplicationsPage() {
                       <CardTitle className="flex flex-wrap items-center gap-x-3 gap-y-1">
                         <span>{application.job_title}</span>
                         <span
-                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${statusStyles[application.status]}`}
+                          className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[application.status]}`}
                         >
-                          {statusLabels[application.status]}
+                          {STATUS_LABELS[application.status]}
                         </span>
                       </CardTitle>
+                      <CardAction>
+                        <ApplicationDetailDialog application={application} />
+                      </CardAction>
                     </CardHeader>
                     <CardContent className="text-sm text-muted-foreground">
                       <p>

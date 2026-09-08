@@ -339,6 +339,11 @@ def _seed_applications(
                     job_id=job.id,
                     job_seeker_id=seeker.user_id,
                     status=status,
+                    # The demo applications predate the form, so the contact
+                    # details are taken from the profile. They carry no
+                    # document: only a real upload creates one.
+                    first_name=seeker.first_name,
+                    last_name=seeker.last_name,
                     created_at=_NOW - timedelta(days=days_ago),
                 )
             )

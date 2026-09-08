@@ -28,8 +28,12 @@ services:
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
       JWT_EXPIRE_DAYS: ${JWT_EXPIRE_DAYS:-7}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      UPLOADS_DIR: /app/uploads
     volumes:
       - ./api:/app
+      # CVs and cover letters live on disk, not in the base: a named volume
+      # keeps them across a rebuild of the api image.
+      - api_uploads:/app/uploads
     ports:
       - "8000:8000"
     depends_on:
@@ -51,3 +55,4 @@ services:
 
 volumes:
   db_data:
+  api_uploads:
