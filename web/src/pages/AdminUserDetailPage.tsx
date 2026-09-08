@@ -1,4 +1,5 @@
-import { Link, useParams } from 'react-router'
+import { useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router'
 import { ArrowLeftIcon } from 'lucide-react'
 import { PageEmpty, PageError, PageLoading } from '@/components/PageState'
 import { PageShell } from '@/components/layout/PageShell'
@@ -6,7 +7,20 @@ import { WORK_MODES } from '@/components/workModes'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Textarea } from '@/components/ui/textarea'
 import { useApiResource } from '@/hooks/use-api-resource'
+import { api } from '@/lib/api'
 
 type UserJob = {
   id: number
@@ -63,7 +77,45 @@ function labelOf(options: { value: string; label: string }[], value: string): st
 
 export function AdminUserDetailPage() {
   const { userId } = useParams<{ userId: string }>()
+  const navigate = useNavigate()
   const { status, data, error } = useApiResource<UserDetail>(`/api/admin/utilisateurs/${userId}`)
+
+  const [actionError, setActionError] = useState('')
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const [warningReason, setWarningReason] = useState('')
+  const [isWarning, setIsWarning] = useState(false)
+  const [warningError, setWarningError] = useState('')
+  const [warningOpen, setWarningOpen] = useState(false)
+
+  async function handleDelete() {
+    setIsDeleting(true)
+    setActionError('')
+    try {
+      await api<void>(`/api/admin/utilisateurs/${userId}`, { method: 'DELETE' })
+      navigate('/admin/utilisateurs')
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Erreur lors de la suppression.')
+      setIsDeleting(false)
+    }
+  }
+
+  async function handleWarn() {
+    setIsWarning(true)
+    setWarningError('')
+    try {
+      await api(`/api/admin/utilisateurs/${userId}/avertissements`, {
+        method: 'POST',
+        body: JSON.stringify({ reason: warningReason }),
+      })
+      setWarningOpen(false)
+      setWarningReason('')
+    } catch (err) {
+      setWarningError(err instanceof Error ? err.message : "Erreur lors de l'envoi de l'avertissement.")
+    } finally {
+      setIsWarning(false)
+    }
+  }
 
   return (
     <PageShell
@@ -86,7 +138,7 @@ export function AdminUserDetailPage() {
               <CardHeader>
                 <CardTitle>{data.display_name}</CardTitle>
               </CardHeader>
-              <CardContent className="flex flex-col gap-2">
+              <CardContent className="flex flex-col gap-3">
                 <div className="flex flex-wrap gap-1.5">
                   <Badge variant="secondary">{roleLabels[data.role]}</Badge>
                   {data.activity_verified !== null && (
@@ -99,6 +151,76 @@ export function AdminUserDetailPage() {
                 <p className="text-xs text-muted-foreground">
                   Inscrit le {dateFormat.format(new Date(data.created_at))}
                 </p>
+
+                {actionError && <p className="text-sm text-destructive">{actionError}</p>}
+
+                {data.role !== 'admin' && (
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    <Dialog
+                      open={warningOpen}
+                      onOpenChange={(next) => {
+                        if (next) setWarningError('')
+                        setWarningOpen(next)
+                      }}
+                    >
+                      <DialogTrigger render={<Button variant="outline" size="sm">Avertir l'utilisateur</Button>} />
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Avertir « {data.display_name} »</DialogTitle>
+                          <DialogDescription>
+                            L'avertissement est enregistré sur le compte, sans le suspendre.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <FieldGroup>
+                          <Field>
+                            <FieldLabel htmlFor="warning-reason">Motif de l'avertissement</FieldLabel>
+                            <Textarea
+                              id="warning-reason"
+                              value={warningReason}
+                              onChange={(event) => setWarningReason(event.target.value)}
+                              rows={3}
+                              required
+                            />
+                          </Field>
+                          <FieldError>{warningError}</FieldError>
+                        </FieldGroup>
+                        <DialogFooter>
+                          <DialogClose render={<Button type="button" variant="outline">Annuler</Button>} />
+                          <Button onClick={handleWarn} disabled={isWarning || !warningReason.trim()}>
+                            {isWarning ? 'Envoi…' : "Envoyer l'avertissement"}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+
+                    <Dialog>
+                      <DialogTrigger
+                        render={
+                          <Button variant="destructive" size="sm" disabled={isDeleting}>
+                            {isDeleting ? 'Suppression…' : 'Supprimer le compte'}
+                          </Button>
+                        }
+                      />
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Supprimer « {data.display_name} » ?</DialogTitle>
+                          <DialogDescription>
+                            {data.role === 'employer'
+                              ? 'Ses offres, les candidatures reçues et les signalements associés sont supprimés avec le compte.'
+                              : 'Ses candidatures et signalements envoyés sont supprimés avec le compte.'}
+                            {' '}Cette action est définitive.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                          <DialogClose render={<Button type="button" variant="outline">Annuler</Button>} />
+                          <Button variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+                            {isDeleting ? 'Suppression…' : 'Supprimer'}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
