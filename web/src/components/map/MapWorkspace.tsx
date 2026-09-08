@@ -241,7 +241,17 @@ export function MapWorkspace() {
 
           <div id="offer-list" tabIndex={-1} className="outline-none">
             {selected ? (
-              <div ref={detailRef} tabIndex={-1} className="rounded-xl border bg-card outline-none">
+              // `key` forces a fresh OfferDetail (and everything inside it,
+              // including ReportOfferDialog) whenever the offer changes —
+              // without it, local state like "already reported" leaks from
+              // one offer to the next since React just updates props on the
+              // same instance instead of remounting it.
+              <div
+                key={selected.id}
+                ref={detailRef}
+                tabIndex={-1}
+                className="rounded-xl border bg-card outline-none"
+              >
                 <OfferDetail offer={selected} onBack={handleBack} />
               </div>
             ) : (

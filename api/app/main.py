@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.archival import archival_cutoff
 from app.db import get_session
 from app.deps import CurrentAdmin, CurrentEmployer, CurrentUser
-from app.models import Application, Employer, Job, Report, User, Warning
+from app.models import Application, Employer, Job, JobSeeker, Report, User, Warning
 
 from app import storage
 from app.routers import applications, auth, dashboard
@@ -91,7 +91,7 @@ class JobOffer(BaseModel):
     time_commitment: str  # "full_time", "part_time"
     address: str | None
     city: str
-    # None pour une offre 100% télétravail : pas de lieu de travail géographique.
+    # None for a fully remote offer: no geographic workplace.
     lat: float | None
     lng: float | None
     geocoding_source: str | None
@@ -135,9 +135,9 @@ def list_offers(
     east: float | None = None,
     session: Session = Depends(get_session),
 ) -> list[JobOffer]:
-    # Les offres 100% télétravail n'ont pas de position : elles sont exclues
-    # de la carte par construction (isnot(None)), mais restent visibles dans
-    # la liste "Mes offres" de l'employeur.
+    # Fully remote offers have no position: excluded from the map by
+    # construction (isnot(None)), but still visible in the employer's own
+    # "Mes offres" list.
     query = (
         select(Job)
         .options(joinedload(Job.employer))
@@ -168,9 +168,9 @@ def list_offers_admin(
     result = []
     for job in jobs:
         offer = job_to_offer(job)
-        # Garanti non-None par le filtre `.where(Job.location.isnot(None))`
-        # ci-dessus ; l'assertion prouve cette invariante au vérificateur de
-        # types, qui ne voit que le type déclaré (float | None).
+        # Guaranteed non-None by the `.where(Job.location.isnot(None))`
+        # filter above; the assertion only proves that invariant to the type
+        # checker, which only sees the declared type (float | None).
         assert offer.lat is not None and offer.lng is not None
         x, y = to_lambert93(offer.lat, offer.lng)
         result.append(AdminJobOffer(**offer.model_dump(), lambert93_x=x, lambert93_y=y))
@@ -183,10 +183,10 @@ class OfferCreate(BaseModel):
     title: str
     description: str
     contract_type: str  # "cdi", "cdd", "stage", "alternance", "interim", "freelance"
-    contract_duration: str | None = None  # ex: "3 mois" — pertinent hors CDI
+    contract_duration: str | None = None  # e.g. "3 months" — relevant outside CDI
     work_mode: str  # "on_site", "hybrid", "remote"
     time_commitment: str  # "full_time", "part_time"
-    address: str | None = None  # obligatoire sauf si work_mode == "remote"
+    address: str | None = None  # required unless work_mode == "remote"
 
     @model_validator(mode="after")
     def address_required_unless_remote(self) -> "OfferCreate":
@@ -223,9 +223,9 @@ def create_offer(
             location_status="pending",
         )
     else:
-        # Garanti non-None par le validateur `address_required_unless_remote`
-        # ci-dessus ; l'assertion sert juste à le prouver au vérificateur de
-        # types, qui ne voit que le type déclaré (str | None).
+        # Guaranteed non-None by `address_required_unless_remote` above; the
+        # assertion only proves it to the type checker, which only sees the
+        # declared type (str | None).
         assert payload.address is not None
         try:
             geo = geocode_address(payload.address)
@@ -271,8 +271,8 @@ def get_job_or_404(session: Session, offer_id: int) -> Job:
     return job
 
 def require_owner_or_admin(user, job: Job) -> None:
-    """L'admin modère (peut agir sur toute offre) ; un employeur ne touche
-    qu'à ses propres offres ; personne d'autre n'a le droit.
+    """Admin moderates (can act on any offer); an employer only touches
+    their own offers; no one else is allowed.
     """
     if user.role == "admin":
         return
@@ -306,9 +306,9 @@ def update_offer(
         job.time_commitment = payload.time_commitment
 
     if job.work_mode == "remote":
-        # Basculer vers le télétravail efface toute position existante,
-        # même si une adresse a été envoyée dans la même requête : elle
-        # n'aurait plus de sens pour ce mode.
+        # Switching to remote clears any existing position, even if an
+        # address was sent in the same request: it would no longer be
+        # meaningful for this mode.
         job.location_address = None
         job.location_city = "Télétravail"
         job.location = None
@@ -329,10 +329,10 @@ def update_offer(
         job.geocoding_score = geo.score
         job.geocoded_at = datetime.now(timezone.utc)
         job.location_status = "geocoded"
-    # NB : passer de "remote" à "on_site"/"hybrid" SANS fournir de nouvelle
-    # adresse dans la même requête laisse l'offre sans position. Pas géré
-    # ici — à traiter côté frontend en rendant l'adresse obligatoire dès que
-    # le mode choisi n'est plus "remote".
+    # NB: switching from "remote" to "on_site"/"hybrid" WITHOUT providing a
+    # new address in the same request leaves the offer without a position.
+    # Not handled here — to be enforced client-side by requiring the address
+    # as soon as the chosen mode is no longer "remote".
 
     session.commit()
     session.refresh(job, attribute_names=["employer"])

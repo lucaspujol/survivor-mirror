@@ -176,8 +176,8 @@ export function AdminReportDetailPage() {
 
   return (
     <PageShell
-      title="Modération d'une offre signalée"
-      description="Offre complète, historique des signalements, et actions de modération."
+      title="Modération d'une offre"
+      description="Offre complète, signalements et candidatures reçues, et actions de modération."
       actions={
         <Button variant="ghost" size="sm" render={<Link to="/admin/signalements" />}>
           <ArrowLeftIcon />
