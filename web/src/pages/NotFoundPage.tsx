@@ -7,7 +7,7 @@ export function NotFoundPage() {
     <PageShell title="Cette page n'existe pas" description="Erreur 404">
       <div className="flex flex-col items-start gap-4">
         <p className="max-w-prose text-sm text-muted-foreground">
-          L'adresse demandée ne correspond à aucune page de ChômageGo. Elle a peut-être
+          L'adresse demandée ne correspond à aucune page de GéoEmploi. Elle a peut-être
           été supprimée, ou l'adresse comporte une erreur de saisie.
         </p>
         <Button render={<Link to="/" />}>Retour à la carte</Button>

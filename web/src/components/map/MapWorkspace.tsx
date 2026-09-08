@@ -34,9 +34,6 @@ export function MapWorkspace() {
   const [selected, setSelected] = useState<Offer | null>(null)
   const [focusLocation, setFocusLocation] = useState<{ lat: number; lng: number } | null>(null)
 
-  // "Toutes les offres" ignore la zone visible de la carte : on fait un
-  // fetch séparé, à la demande, plutôt que de mélanger ça avec le fetch par
-  // bornes qui suit les déplacements de la carte.
   const [showAllOffers, setShowAllOffers] = useState(false)
   const [allOffers, setAllOffers] = useState<Offer[]>([])
   const [isLoadingAll, setIsLoadingAll] = useState(false)
@@ -61,17 +58,13 @@ export function MapWorkspace() {
     [sourceOffers, filters, sort],
   )
 
-  // Titres et entreprises déjà chargés, comme base de suggestions pour la
-  // recherche par mots-clés — pas besoin d'un appel réseau séparé.
   const keywordSuggestions = useMemo(
     () => Array.from(new Set(sourceOffers.flatMap((offer) => [offer.title, offer.company]))),
     [sourceOffers],
   )
 
   // Focusing an offer zooms in, which would otherwise refetch a viewport
-  // holding just that offer and empty the list behind it. Same idea for le
-  // mode "toutes les offres" : pas la peine de refetch par zone pendant
-  // qu'on regarde tout, sous peine de perdre ce mode au premier mouvement.
+  // holding just that offer and empty the list behind it.
   const handleBoundsChange = useCallback(
     (bounds: Bounds) => {
       if (!selected && !showAllOffers) setBounds(bounds)
@@ -113,10 +106,7 @@ export function MapWorkspace() {
         const [lng, lat] = feature.geometry.coordinates
         setFocusLocation({ lat, lng })
       }
-      // Adresse introuvable : on laisse le dernier recentrage valide en
-      // place plutôt que de bouger la carte sur un échec silencieux.
     } catch {
-      // Panne réseau / API Adresse indisponible : idem, pas de recentrage.
     }
   }, [draft])
 

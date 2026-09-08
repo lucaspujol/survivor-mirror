@@ -16,7 +16,7 @@ export function PageShell({
   ...props
 }: PageShellProps) {
   return (
-    <div className={cn('mx-auto w-full max-w-5xl px-4 py-6 md:px-6', className)} {...props}>
+    <main className={cn('mx-auto w-full max-w-5xl px-4 py-6 md:px-6', className)} {...props}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-primary">{title}</h1>
@@ -27,6 +27,6 @@ export function PageShell({
         {actions}
       </div>
       <div className="mt-6">{children}</div>
-    </div>
+    </main>
   )
 }

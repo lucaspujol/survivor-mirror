@@ -45,7 +45,7 @@ function SidebarBrand() {
   return (
     <div className="flex flex-col items-start">
       <span className="font-heading text-xl leading-none font-bold tracking-tight text-primary">
-        Chômage<span className="text-foreground">Go</span>
+        Géo<span className="text-foreground">Emploi</span>
       </span>
       <span className="mt-1.5 text-[11px] leading-tight text-muted-foreground">
         Démonstrateur technique

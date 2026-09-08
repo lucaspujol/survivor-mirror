@@ -1,4 +1,4 @@
-# ChômageGo
+# GéoEmploi
 
 Interactive map of geolocated job offers.
 
@@ -46,9 +46,9 @@ handles, already filled in with a profile, offers or applications.
 
 | Role | Email | Password |
 | --- | --- | --- |
-| Job seeker (`seeker`) | `candidat@demo.chomagego.example` | `ChomageGo2026!` |
-| Employer (`employer`) | `employeur@demo.chomagego.example` | `ChomageGo2026!` |
-| Administrator (`admin`) | `admin@demo.chomagego.example` | `ChomageGo2026!` |
+| Job seeker (`seeker`) | `candidat@demo.geoemploi.example` | `geoemploi2026!` |
+| Employer (`employer`) | `employeur@demo.geoemploi.example` | `geoemploi2026!` |
+| Administrator (`admin`) | `admin@demo.geoemploi.example` | `geoemploi2026!` |
 
 The administrator can only come from the seed: `/api/auth/register` refuses the
 `admin` role on purpose (see [`api/app/schemas.py`](api/app/schemas.py)).
@@ -66,7 +66,7 @@ artifact.
 
 > This password is a **fictional placeholder for the demo**, published on
 > purpose and shared by every seeded account. It protects nothing. The
-> `@demo.chomagego.example` domain is reserved by RFC 2606 and can never
+> `@demo.geoemploi.example` domain is reserved by RFC 2606 and can never
 > receive mail, and the seeded companies, people and offers are all invented.
 
 The seed is idempotent — running it again creates no duplicate and deletes
@@ -78,15 +78,15 @@ docker compose exec api python -m app.seed
 
 ## Demo build artifact
 
-Every run of the CI workflow publishes a `chomagego-demo-build` artifact
+Every run of the CI workflow publishes a `geoemploi-demo-build` artifact
 containing the compiled frontend, the API with its migrations and a Compose
 file that runs the prototype **without this repository**.
 
 Download it from the run page (*Actions* → the run → *Artifacts*), then:
 
 ```sh
-unzip chomagego-demo-build.zip -d chomagego-demo
-cd chomagego-demo
+unzip geoemploi-demo-build.zip -d geoemploi-demo
+cd geoemploi-demo
 docker compose up --build   # then open http://localhost:8080
 ```
 
@@ -94,7 +94,7 @@ docker compose up --build   # then open http://localhost:8080
 same bundle is produced locally by:
 
 ```sh
-./scripts/build-demo-bundle.sh   # -> build/chomagego-demo-build/
+./scripts/build-demo-bundle.sh   # -> build/geoemploi-demo-build/
 ```
 
 Hot reload is active on both sides; no rebuild is needed to change code.

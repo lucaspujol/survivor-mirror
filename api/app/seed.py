@@ -1,4 +1,4 @@
-"""Idempotent demo dataset for the ChômageGo prototype.
+"""Idempotent demo dataset for the GéoEmploi prototype.
 
 Run it as many times as you like: every row is looked up by a natural key
 before being inserted, so a second run is a no-op and nothing already in the
@@ -31,10 +31,10 @@ from app.security import hash_password
 # `.example` is reserved by RFC 2606: the domain cannot be registered and no
 # mail can ever reach it. `.local` and `.test` are rejected outright by the
 # EmailStr validator, so they cannot be used for accounts that must sign in.
-DEMO_DOMAIN = "demo.chomagego.example"
+DEMO_DOMAIN = "demo.geoemploi.example"
 # Placeholder shared by every seeded account. Not a secret: it is published in
 # the README so the demo can be replayed by anyone.
-DEMO_PASSWORD = "ChomageGo2026!"
+DEMO_PASSWORD = "geoemploi2026!"
 
 ADMIN_EMAIL = f"admin@{DEMO_DOMAIN}"
 EMPLOYER_EMAIL = f"employeur@{DEMO_DOMAIN}"
@@ -308,7 +308,7 @@ def _seed_jobs(session: Session, employers: dict[str, Employer]) -> dict[tuple[s
                 location=from_shape(Point(lng, lat), srid=4326),
                 # The coordinates are shipped with the dataset, so the seed
                 # never calls the Adresse API: it must work offline and in CI.
-                geocoding_source="chomagego-demo-seed",
+                geocoding_source="geoemploi-demo-seed",
                 geocoding_score=1.0,
                 geocoded_at=_NOW,
                 location_status="geocoded",
