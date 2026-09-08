@@ -14,6 +14,7 @@ import { useOffersInBounds } from '@/hooks/use-offers-in-bounds'
 import { useAuth } from '@/lib/auth'
 import {
   EMPTY_FILTERS,
+  listOffers,
   matchesFilters,
   sortOffers,
   type Bounds,
@@ -31,19 +32,51 @@ export function MapWorkspace() {
   const [filters, setFilters] = useState<OfferFilters>(EMPTY_FILTERS)
   const [sort, setSort] = useState<SortKey>('recent')
   const [selected, setSelected] = useState<Offer | null>(null)
+  const [focusLocation, setFocusLocation] = useState<{ lat: number; lng: number } | null>(null)
+
+  // "Toutes les offres" ignore la zone visible de la carte : on fait un
+  // fetch séparé, à la demande, plutôt que de mélanger ça avec le fetch par
+  // bornes qui suit les déplacements de la carte.
+  const [showAllOffers, setShowAllOffers] = useState(false)
+  const [allOffers, setAllOffers] = useState<Offer[]>([])
+  const [isLoadingAll, setIsLoadingAll] = useState(false)
+
+  const handleShowAll = useCallback(() => {
+    setShowAllOffers(true)
+    setIsLoadingAll(true)
+    listOffers()
+      .then(setAllOffers)
+      .catch(() => setAllOffers([]))
+      .finally(() => setIsLoadingAll(false))
+  }, [])
+
+  const handleBackToMapArea = useCallback(() => {
+    setShowAllOffers(false)
+  }, [])
+
+  const sourceOffers = showAllOffers ? allOffers : offers
 
   const visible = useMemo(
-    () => sortOffers(offers.filter((offer) => matchesFilters(offer, filters)), sort),
-    [offers, filters, sort],
+    () => sortOffers(sourceOffers.filter((offer) => matchesFilters(offer, filters)), sort),
+    [sourceOffers, filters, sort],
+  )
+
+  // Titres et entreprises déjà chargés, comme base de suggestions pour la
+  // recherche par mots-clés — pas besoin d'un appel réseau séparé.
+  const keywordSuggestions = useMemo(
+    () => Array.from(new Set(sourceOffers.flatMap((offer) => [offer.title, offer.company]))),
+    [sourceOffers],
   )
 
   // Focusing an offer zooms in, which would otherwise refetch a viewport
-  // holding just that offer and empty the list behind it.
+  // holding just that offer and empty the list behind it. Same idea for le
+  // mode "toutes les offres" : pas la peine de refetch par zone pendant
+  // qu'on regarde tout, sous peine de perdre ce mode au premier mouvement.
   const handleBoundsChange = useCallback(
     (bounds: Bounds) => {
-      if (!selected) setBounds(bounds)
+      if (!selected && !showAllOffers) setBounds(bounds)
     },
-    [selected, setBounds],
+    [selected, showAllOffers, setBounds],
   )
 
   const toggleFacet = useCallback((facet: FacetKey, value: string) => {
@@ -58,22 +91,54 @@ export function MapWorkspace() {
     })
   }, [])
 
+  // Geocodes the "zone géographique" field and flies the map there. The
+  // resulting `moveend` refetches offers for that viewport through the
+  // existing bounds mechanism — no separate client-side text filter needed.
+  const handleSearch = useCallback(async () => {
+    setFilters((current) => ({ ...current, query: draft.query }))
+
+    const place = draft.location.trim()
+    if (!place) {
+      setFocusLocation(null)
+      return
+    }
+
+    try {
+      const response = await fetch(
+        `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(place)}&limit=1`,
+      )
+      const data = await response.json()
+      const feature = data.features?.[0]
+      if (feature) {
+        const [lng, lat] = feature.geometry.coordinates
+        setFocusLocation({ lat, lng })
+      }
+      // Adresse introuvable : on laisse le dernier recentrage valide en
+      // place plutôt que de bouger la carte sur un échec silencieux.
+    } catch {
+      // Panne réseau / API Adresse indisponible : idem, pas de recentrage.
+    }
+  }, [draft])
+
   const reset = useCallback(() => {
     setDraft({ query: '', location: '' })
     setFilters(EMPTY_FILTERS)
+    setFocusLocation(null)
+    setShowAllOffers(false)
   }, [])
 
   const sidebar = <FilterSidebar offers={offers} filters={filters} onToggle={toggleFacet} />
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-6 md:px-6">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-6 md:px-6">
       <SearchBanner
         query={draft.query}
         onQueryChange={(query) => setDraft((current) => ({ ...current, query }))}
         location={draft.location}
         onLocationChange={(location) => setDraft((current) => ({ ...current, location }))}
-        onSearch={() => setFilters((current) => ({ ...current, ...draft }))}
+        onSearch={handleSearch}
         onReset={reset}
+        keywordSuggestions={keywordSuggestions}
       />
 
       <div className="flex flex-col gap-8 lg:flex-row">
@@ -109,6 +174,7 @@ export function MapWorkspace() {
               selected={selected}
               onSelect={setSelected}
               onBoundsChange={handleBoundsChange}
+              focusLocation={focusLocation}
             />
 
             {isLoading && (
@@ -129,15 +195,18 @@ export function MapWorkspace() {
           ) : (
             <OfferResults
               offers={visible}
-              isLoading={isLoading}
+              isLoading={showAllOffers ? isLoadingAll : isLoading}
               sort={sort}
               onSortChange={setSort}
               selectedId={null}
               onSelect={setSelected}
+              showingAll={showAllOffers}
+              onShowAll={handleShowAll}
+              onBackToMapArea={handleBackToMapArea}
             />
           )}
         </div>
       </div>
-    </div>
+    </main>
   )
 }
