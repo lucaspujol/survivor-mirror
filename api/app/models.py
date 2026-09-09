@@ -51,6 +51,9 @@ WORK_MODES = ("on_site", "hybrid", "remote")
 # Independent from WORK_MODES: a job can be full-time remote, part-time
 # on-site, etc. - the two dimensions don't overlap.
 TIME_COMMITMENTS = ("full_time", "part_time")
+# Files a candidate attaches to an application. The CV is required, the cover
+# letter optional; one document of each kind per application at most.
+DOCUMENT_KINDS = ("cv", "cover_letter")
 
 role_enum = Enum(*ROLES, name="user_role", native_enum=False, create_constraint=False)
 application_status_enum = Enum(
@@ -81,6 +84,12 @@ work_mode_enum = Enum(
 time_commitment_enum = Enum(
     *TIME_COMMITMENTS,
     name="time_commitment",
+    native_enum=False,
+    create_constraint=False,
+)
+document_kind_enum = Enum(
+    *DOCUMENT_KINDS,
+    name="document_kind",
     native_enum=False,
     create_constraint=False,
 )
@@ -287,6 +296,17 @@ class Application(Base):
     status: Mapped[str] = mapped_column(
         application_status_enum, nullable=False, server_default=text("'sent'")
     )
+    # Contact details as filled in on the application form. They are copied
+    # rather than read from the profile: an application is a snapshot the
+    # employer must keep seeing unchanged even if the seeker later edits their
+    # account, and a seeker may want to be reached at a different number.
+    first_name: Mapped[str] = mapped_column(Text, nullable=False)
+    last_name: Mapped[str] = mapped_column(Text, nullable=False)
+    # Optional: a job search does not require a phone number, the email of the
+    # account is always reachable.
+    phone: Mapped[str | None] = mapped_column(Text)
+    # Free text the candidate adds to their application.
+    message: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -299,3 +319,44 @@ class Application(Base):
 
     job: Mapped[Job] = relationship(back_populates="applications")
     job_seeker: Mapped[JobSeeker] = relationship(back_populates="applications")
+    documents: Mapped[list["ApplicationDocument"]] = relationship(
+        back_populates="application", cascade="all, delete-orphan"
+    )
+
+class ApplicationDocument(Base):
+    """A CV or cover letter attached to an application.
+
+    Only the metadata lives in the database; the file itself is written under
+    the uploads directory (see `app.storage`), so a dump of the base stays
+    small and a document is served by streaming one file.
+    """
+
+    __tablename__ = "application_documents"
+    __table_args__ = (
+        # At most one CV and one cover letter per application: re-uploading
+        # replaces the previous file rather than piling up versions.
+        UniqueConstraint(
+            "application_id", "kind", name="uq_application_documents_application_kind"
+        ),
+        CheckConstraint(
+            _in_check("kind", DOCUMENT_KINDS), name="ck_application_documents_kind"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    application_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("applications.id", ondelete="CASCADE"), nullable=False
+    )
+    kind: Mapped[str] = mapped_column(document_kind_enum, nullable=False)
+    # Name the candidate's file had, shown back to both sides and used as the
+    # download filename. Never used to build the path on disk.
+    original_name: Mapped[str] = mapped_column(Text, nullable=False)
+    # Path relative to the uploads root, e.g. "12/cv-a3f9.pdf".
+    stored_path: Mapped[str] = mapped_column(Text, nullable=False)
+    mime_type: Mapped[str] = mapped_column(Text, nullable=False)
+    size_bytes: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    application: Mapped[Application] = relationship(back_populates="documents")

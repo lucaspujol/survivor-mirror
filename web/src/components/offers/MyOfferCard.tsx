@@ -5,6 +5,7 @@ import {
   MapPinIcon,
   UsersIcon,
 } from 'lucide-react'
+import { OfferApplicantsDialog } from '@/components/applications/OfferApplicantsDialog'
 import { ContractBadge } from '@/components/offers/ContractBadge'
 import { DeleteOfferDialog } from '@/components/offers/DeleteOfferDialog'
 import { EditOfferDialog } from '@/components/offers/EditOfferDialog'
@@ -33,7 +34,8 @@ export function MyOfferCard({ offer, onSaved, onDeleted }: MyOfferCardProps) {
     <Card>
       <CardHeader>
         <CardTitle className="text-primary">{offer.title}</CardTitle>
-        <CardAction className="flex gap-2">
+        <CardAction className="flex flex-wrap gap-2">
+          <OfferApplicantsDialog offer={offer} />
           <EditOfferDialog offer={offer} onSaved={onSaved} />
           <DeleteOfferDialog offer={offer} onDeleted={onDeleted} />
         </CardAction>

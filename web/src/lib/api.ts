@@ -36,3 +36,17 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
 
   return response.status === 204 ? (undefined as T) : await response.json()
 }
+
+/**
+ * Same as `api`, for a multipart form. The content type is left to the
+ * browser: it alone knows the boundary it generated for the body.
+ */
+export async function apiForm<T>(path: string, body: FormData, method = 'POST'): Promise<T> {
+  const response = await fetch(path, { method, body })
+
+  if (!response.ok) {
+    throw new ApiError(response.status, await readMessage(response))
+  }
+
+  return response.status === 204 ? (undefined as T) : await response.json()
+}

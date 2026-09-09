@@ -35,6 +35,10 @@ find "$out_dir/api" \
   \( -name '__pycache__' -o -name '.venv' -o -name '.pytest_cache' \) \
   -prune -exec rm -rf {} +
 find "$out_dir/api" -name '*.py[co]' -delete
+# A local run writes the uploaded CVs and cover letters under api/uploads/.
+# They are real files sent by whoever used that stack, and the bundle is
+# published as a public artifact: it must never carry them.
+rm -rf "$out_dir/api/uploads"
 
 cp "$repo_root/deploy/demo/compose.yaml" "$out_dir/compose.yaml"
 cp "$repo_root/deploy/demo/DEMO.md" "$out_dir/DEMO.md"

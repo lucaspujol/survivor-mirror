@@ -43,3 +43,5 @@ venv/
 Thumbs.db
 
 # test
+# uploaded application documents (CVs, cover letters)
+api/uploads/

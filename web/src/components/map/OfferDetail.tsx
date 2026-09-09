@@ -1,10 +1,21 @@
+import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import { toast } from 'sonner'
-import { ArrowLeftIcon, BuildingIcon, CalendarClockIcon, FlagIcon, MapPinIcon } from 'lucide-react'
+import {
+  ArrowLeftIcon,
+  BuildingIcon,
+  CalendarClockIcon,
+  CheckIcon,
+  FlagIcon,
+  MapPinIcon,
+} from 'lucide-react'
+import { ApplyDialog } from '@/components/applications/ApplyDialog'
 import { ContractBadge } from '@/components/offers/ContractBadge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { api } from '@/lib/api'
+import type { Application } from '@/lib/applications'
 import { useAuth } from '@/lib/auth'
 import { daysLeft, publishedLabel, type Offer } from '@/lib/offers'
 
@@ -17,6 +28,30 @@ export function OfferDetail({ offer, onBack }: OfferDetailProps) {
   const { user } = useAuth()
   const location = useLocation()
   const remaining = daysLeft(offer)
+
+  // Whether this seeker already applied. The API refuses a second application
+  // anyway, but a button that is going to fail is worse than the plain
+  // statement that the application is already in.
+  const [applied, setApplied] = useState(false)
+
+  useEffect(() => {
+    if (user?.role !== 'seeker') return
+    let cancelled = false
+
+    api<Application[]>('/api/candidatures')
+      .then((applications) => {
+        if (!cancelled) {
+          setApplied(applications.some((application) => application.job_id === offer.id))
+        }
+      })
+      // A failed check just leaves the button available: the API stays the
+      // authority on the duplicate.
+      .catch(() => undefined)
+
+    return () => {
+      cancelled = true
+    }
+  }, [user?.role, offer.id])
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -55,17 +90,25 @@ export function OfferDetail({ offer, onBack }: OfferDetailProps) {
       <p className="text-xs text-muted-foreground">{publishedLabel(offer.created_at)}</p>
 
       <div className="flex flex-col gap-2">
-        {user?.role === 'seeker' || !user ? (
-          user ? (
-            <Button onClick={() => toast.info('Les candidatures arrivent bientôt.')}>
-              Postuler
-            </Button>
+        {!user && (
+          <Button render={<Link to="/login" state={{ from: location }} />}>
+            Se connecter pour postuler
+          </Button>
+        )}
+        {user?.role === 'seeker' &&
+          (applied ? (
+            <p className="flex items-center gap-1.5 text-sm font-medium text-emerald-700">
+              <CheckIcon className="size-4" />
+              Vous avez déjà postulé à cette offre.
+            </p>
           ) : (
-            <Button render={<Link to="/login" state={{ from: location }} />}>
-              Se connecter pour postuler
-            </Button>
-          )
-        ) : null}
+            <ApplyDialog
+              jobId={offer.id}
+              jobTitle={offer.title}
+              company={offer.company}
+              onApplied={() => setApplied(true)}
+            />
+          ))}
         <Button
           variant="ghost"
           size="sm"

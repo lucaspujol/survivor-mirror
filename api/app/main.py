@@ -12,9 +12,10 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 from app.db import get_session
 from app.deps import CurrentAdmin, CurrentEmployer, CurrentUser
-from app.models import Employer, Job
+from app.models import Application, Employer, Job
 
-from app.routers import auth, dashboard
+from app import storage
+from app.routers import applications, auth, dashboard
 
 app = FastAPI(
     title="GéoEmploi API",
@@ -32,6 +33,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(dashboard.router)
+app.include_router(applications.router)
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
@@ -318,5 +320,15 @@ def delete_offer(
 ) -> None:
     job = get_job_or_404(session, offer_id)
     require_owner_or_admin(current_user, job)
+
+    # The cascade removes the application rows, which would leave their CVs and
+    # cover letters behind as orphan files: the ids have to be read first.
+    application_ids = session.scalars(
+        select(Application.id).where(Application.job_id == job.id)
+    ).all()
+
     session.delete(job)
     session.commit()
+
+    for application_id in application_ids:
+        storage.delete_application_files(application_id)
