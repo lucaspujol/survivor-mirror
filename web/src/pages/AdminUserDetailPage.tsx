@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { ArrowLeftIcon } from 'lucide-react'
 import { PageEmpty, PageError, PageLoading } from '@/components/PageState'

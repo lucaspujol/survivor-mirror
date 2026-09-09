@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { SlidersHorizontalIcon } from 'lucide-react'
 import { FilterSidebar, type FacetKey } from '@/components/map/FilterSidebar'
 import { JobMap } from '@/components/map/JobMap'
@@ -15,6 +16,7 @@ import { useOffersInBounds } from '@/hooks/use-offers-in-bounds'
 import { useAuth } from '@/lib/auth'
 import {
   EMPTY_FILTERS,
+  getOffer,
   listOffers,
   matchesFilters,
   sortOffers,
@@ -37,6 +39,7 @@ export function MapWorkspace() {
   const [sort, setSort] = useState<SortKey>('recent')
   const [selected, setSelected] = useState<Offer | null>(null)
   const [focusLocation, setFocusLocation] = useState<{ lat: number; lng: number } | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
   const detailRef = useRef<HTMLDivElement>(null)
   const mapFocusRef = useRef<{ focusMarker: (id: number) => boolean } | null>(null)
   // Where the open offer was picked from, so closing it can return the focus
@@ -87,6 +90,42 @@ export function MapWorkspace() {
     requestAnimationFrame(restore)
   }, [])
 
+  // Deep link support: "/?offre=19" opens that offer directly, flown to on
+  // the map, instead of requiring the person to find it themselves. Used by
+  // the admin user-account page to jump straight from a job to its pin.
+  useEffect(() => {
+    const offerId = searchParams.get('offre')
+    if (!offerId) return
+
+    getOffer(Number(offerId))
+      .then((offer) => {
+        setSelected(offer)
+        if (offer.lat != null && offer.lng != null) {
+          setFocusLocation({ lat: offer.lat, lng: offer.lng })
+        }
+      })
+      .catch(() => {
+        // Deleted or invalid id in the URL: fail silently, stay on the map.
+      })
+      .finally(() => {
+        // Drop the param once consumed, so reloading the page later doesn't
+        // keep re-fetching and re-flying to the same offer forever.
+        setSearchParams(
+          (params) => {
+            params.delete('offre')
+            return params
+          },
+          { replace: true },
+        )
+      })
+    // Deliberately runs once on mount only: it depends on the URL param as it
+    // was on first load, not on searchParams after we clear it above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // "All offers" ignores the map's current viewport: a separate, on-demand
+  // fetch, rather than mixing it with the bounds-based fetch that otherwise
+  // follows every map movement.
   const [showAllOffers, setShowAllOffers] = useState(false)
   const [allOffers, setAllOffers] = useState<Offer[]>([])
   const [isLoadingAll, setIsLoadingAll] = useState(false)
@@ -111,13 +150,17 @@ export function MapWorkspace() {
     [sourceOffers, filters, sort],
   )
 
+  // Titles and companies already loaded, as the basis for keyword search
+  // suggestions — no separate network call needed.
   const keywordSuggestions = useMemo(
     () => Array.from(new Set(sourceOffers.flatMap((offer) => [offer.title, offer.company]))),
     [sourceOffers],
   )
 
   // Focusing an offer zooms in, which would otherwise refetch a viewport
-  // holding just that offer and empty the list behind it.
+  // holding just that offer and empty the list behind it. Same idea for
+  // "all offers" mode: no point refetching by area while looking at
+  // everything, at the risk of losing that mode on the first map movement.
   const handleBoundsChange = useCallback(
     (bounds: Bounds) => {
       if (!selected && !showAllOffers) setBounds(bounds)
@@ -159,7 +202,10 @@ export function MapWorkspace() {
         const [lng, lat] = feature.geometry.coordinates
         setFocusLocation({ lat, lng })
       }
+      // Address not found: leave the last valid recentring in place rather
+      // than moving the map on a silent failure.
     } catch {
+      // Network failure / Adresse API unavailable: same, no recentring.
     }
   }, [draft])
 
