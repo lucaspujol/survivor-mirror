@@ -10,6 +10,7 @@ from pyproj import Transformer
 from shapely.geometry import Point
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
+from app.archival import archival_cutoff
 from app.db import get_session
 from app.deps import CurrentAdmin, CurrentEmployer, CurrentUser
 from app.models import Application, Employer, Job
@@ -142,6 +143,8 @@ def list_offers(
         select(Job)
         .options(joinedload(Job.employer))
         .where(Job.location.isnot(None))
+        # Archived offers leave the map: they are no longer open to apply to.
+        .where(Job.created_at > archival_cutoff())
     )
 
     if south is not None and west is not None and north is not None and east is not None:
@@ -155,7 +158,12 @@ def list_offers(
 def list_offers_admin(
     _admin: CurrentAdmin, session: Session = Depends(get_session)
 ) -> list[AdminJobOffer]:
-    query = select(Job).options(joinedload(Job.employer)).where(Job.location.isnot(None))
+    query = (
+        select(Job)
+        .options(joinedload(Job.employer))
+        .where(Job.location.isnot(None))
+        .where(Job.created_at > archival_cutoff())
+    )
     jobs = session.execute(query).scalars().all()
 
     result = []

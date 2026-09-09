@@ -11,6 +11,8 @@ export type MyOffer = {
   time_commitment: string
   location_status: 'pending' | 'geocoded' | 'to_verify'
   application_count: number
+  /** Past its 30-day lifetime: off the map, and closed to new applications. */
+  archived: boolean
   created_at: string
 }
 
