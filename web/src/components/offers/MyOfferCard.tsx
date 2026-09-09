@@ -67,9 +67,9 @@ export function MyOfferCard({ offer, onSaved, onDeleted }: MyOfferCardProps) {
             <UsersIcon />
             {offer.application_count} candidature{offer.application_count > 1 ? 's' : ''}
           </Badge>
-          <Badge variant={remaining <= 5 ? 'destructive' : 'outline'}>
+          <Badge variant={offer.archived || remaining <= 5 ? 'destructive' : 'outline'}>
             <CalendarClockIcon />
-            {remaining === 0 ? 'Expirée' : `Expire dans ${remaining} j`}
+            {offer.archived ? 'Archivée' : `Expire dans ${remaining} j`}
           </Badge>
         </div>
 

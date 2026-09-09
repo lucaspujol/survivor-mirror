@@ -12,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import joinedload, selectinload
 
 from app import storage
+from app.archival import is_archived
 from app.deps import CurrentEmployer, CurrentSeeker, CurrentUser, DbSession
 from app.models import Application, ApplicationDocument, Job, JobSeeker
 from app.schemas import (
@@ -105,6 +106,14 @@ def apply_to_offer(
     job = db.get(Job, job_id)
     if job is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"Offre {job_id} introuvable.")
+
+    # An archived offer is off the map, but a stale tab or a direct call could
+    # still post to it.
+    if is_archived(job):
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Cette offre est archivée : elle n'accepte plus de candidature.",
+        )
 
     already = db.scalar(
         select(Application).where(
