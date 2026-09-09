@@ -30,7 +30,12 @@ export function OfferDetail({ offer, onBack }: OfferDetailProps) {
         <h2 className="text-lg leading-tight font-semibold">{offer.title}</h2>
         <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
           <BuildingIcon className="size-3.5" />
-          {offer.company}
+          <Link
+            to={`/entreprises/${offer.employer_id}`}
+            className="underline underline-offset-4 hover:text-primary"
+          >
+            {offer.company}
+          </Link>
         </p>
       </div>
 

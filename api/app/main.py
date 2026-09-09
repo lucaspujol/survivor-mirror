@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 from app.db import get_session
 from app.deps import CurrentAdmin, CurrentEmployer, CurrentUser
-from app.models import Application, Employer, Job, JobSeeker, Report, User, Warning
+from app.models import REPORT_STATUSES, Application, Employer, Job, JobSeeker, Report, User, Warning
 
 from app.routers import auth, dashboard
 
@@ -81,6 +81,7 @@ class JobOffer(BaseModel):
     id: int
     title: str
     company: str
+    employer_id: int
     description: str
     contract_type: str
     contract_duration: str | None
@@ -88,7 +89,7 @@ class JobOffer(BaseModel):
     time_commitment: str  # "full_time", "part_time"
     address: str | None
     city: str
-    # None pour une offre 100% télétravail : pas de lieu de travail géographique.
+    # None for a fully remote offer: no geographic workplace.
     lat: float | None
     lng: float | None
     geocoding_source: str | None
@@ -110,6 +111,7 @@ def job_to_offer(job: Job) -> JobOffer:
         id=job.id,
         title=job.title,
         company=job.employer.company_name,
+        employer_id=job.employer_id,
         description=job.description,
         contract_type=job.contract_type,
         contract_duration=job.contract_duration,
@@ -132,9 +134,9 @@ def list_offers(
     east: float | None = None,
     session: Session = Depends(get_session),
 ) -> list[JobOffer]:
-    # Les offres 100% télétravail n'ont pas de position : elles sont exclues
-    # de la carte par construction (isnot(None)), mais restent visibles dans
-    # la liste "Mes offres" de l'employeur.
+    # Fully remote offers have no position: excluded from the map by
+    # construction (isnot(None)), but still visible in the employer's own
+    # "Mes offres" list.
     query = (
         select(Job)
         .options(joinedload(Job.employer))
@@ -147,6 +149,64 @@ def list_offers(
 
     jobs = session.execute(query).scalars().all()
     return [job_to_offer(job) for job in jobs]
+
+
+class PublicEmployerOffer(BaseModel):
+    id: int
+    title: str
+    contract_type: str
+    work_mode: str
+    city: str
+    created_at: datetime
+
+
+class PublicEmployerDetail(BaseModel):
+    id: int
+    company_name: str
+    email: str
+    phone: str | None
+    description: str | None
+    offers: list[PublicEmployerOffer]
+
+
+@app.get("/api/employeurs/{employer_id}", response_model=PublicEmployerDetail)
+def get_employer_public(
+    employer_id: int, session: Session = Depends(get_session)
+) -> PublicEmployerDetail:
+    """Public company profile: no auth required, reachable by anyone who
+    clicks a company name from an offer, signed in or not."""
+    employer = session.execute(
+        select(Employer)
+        .options(joinedload(Employer.user))
+        .where(Employer.user_id == employer_id)
+    ).scalar_one_or_none()
+    if employer is None:
+        raise HTTPException(status_code=404, detail=f"Entreprise {employer_id} introuvable.")
+
+    jobs = session.execute(
+        select(Job)
+        .where(Job.employer_id == employer_id)
+        .order_by(Job.created_at.desc())
+    ).scalars().all()
+
+    return PublicEmployerDetail(
+        id=employer.user_id,
+        company_name=employer.company_name,
+        email=employer.user.email,
+        phone=employer.phone,
+        description=employer.description,
+        offers=[
+            PublicEmployerOffer(
+                id=job.id,
+                title=job.title,
+                contract_type=job.contract_type,
+                work_mode=job.work_mode,
+                city=job.location_city,
+                created_at=job.created_at,
+            )
+            for job in jobs
+        ],
+    )
 
 @app.get("/api/admin/offres", response_model=list[AdminJobOffer])
 def list_offers_admin(
@@ -261,8 +321,8 @@ def get_job_or_404(session: Session, offer_id: int) -> Job:
     return job
 
 def require_owner_or_admin(user, job: Job) -> None:
-    """L'admin modère (peut agir sur toute offre) ; un employeur ne touche
-    qu'à ses propres offres ; personne d'autre n'a le droit.
+    """Admin moderates (can act on any offer); an employer only touches
+    their own offers; no one else is allowed.
     """
     if user.role == "admin":
         return
@@ -271,6 +331,18 @@ def require_owner_or_admin(user, job: Job) -> None:
     raise HTTPException(
         status_code=403, detail="Vous n'avez pas le droit de modifier cette offre."
     )
+
+
+@app.get("/api/offres/{offer_id}", response_model=JobOffer)
+def get_offer_public(offer_id: int, session: Session = Depends(get_session)) -> JobOffer:
+    """Public single-offer lookup, used to deep-link the map onto one
+    specific offer (e.g. from an admin's user account page)."""
+    job = session.execute(
+        select(Job).options(joinedload(Job.employer)).where(Job.id == offer_id)
+    ).scalar_one_or_none()
+    if job is None:
+        raise HTTPException(status_code=404, detail=f"Offre {offer_id} introuvable.")
+    return job_to_offer(job)
 
 @app.patch("/api/offres/{offer_id}", response_model=JobOffer)
 def update_offer(
@@ -417,6 +489,69 @@ def list_reports(
     ]
 
 
+# Ordered worst-to-best: the group's displayed status is whichever member
+# report is least resolved, so an offer with any pending report never looks
+# "dismissed" just because other reporters' complaints were already closed.
+REPORT_STATUS_PRIORITY = {status: index for index, status in enumerate(REPORT_STATUSES)}
+
+
+class ReportGroupOut(BaseModel):
+    job_id: int
+    job_title: str
+    report_count: int
+    employer_id: int
+    company_name: str
+    employer_email: str
+    warning_count: int
+    status: str
+    latest_report_at: datetime
+
+
+@app.get("/api/admin/signalements/par-offre", response_model=list[ReportGroupOut])
+def list_reports_grouped_by_offer(
+    _admin: CurrentAdmin, session: Session = Depends(get_session)
+) -> list[ReportGroupOut]:
+    reports = session.execute(
+        select(Report).options(
+            joinedload(Report.job).joinedload(Job.employer).joinedload(Employer.user)
+        )
+    ).scalars().all()
+
+    groups: dict[int, list[Report]] = {}
+    for r in reports:
+        groups.setdefault(r.job_id, []).append(r)
+
+    employer_ids = {group[0].job.employer_id for group in groups.values()}
+    warning_counts: dict[int, int] = {}
+    if employer_ids:
+        rows = session.execute(
+            select(Warning.user_id, func.count())
+            .where(Warning.user_id.in_(employer_ids))
+            .group_by(Warning.user_id)
+        ).all()
+        warning_counts = dict(rows)
+
+    result = []
+    for job_id, group in groups.items():
+        job = group[0].job
+        employer = job.employer
+        worst = min(group, key=lambda r: REPORT_STATUS_PRIORITY[r.status])
+        result.append(
+            ReportGroupOut(
+                job_id=job_id,
+                job_title=job.title,
+                report_count=len(group),
+                employer_id=employer.user_id,
+                company_name=employer.company_name,
+                employer_email=employer.user.email,
+                warning_count=warning_counts.get(employer.user_id, 0),
+                status=worst.status,
+                latest_report_at=max(r.created_at for r in group),
+            )
+        )
+    return result
+
+
 # --- Offer moderation (admin) ---
 
 class AdminOfferDetail(BaseModel):
@@ -474,7 +609,7 @@ def get_offer_admin(
 
 
 class ReportStatusUpdate(BaseModel):
-    status: str  # "pending", "reviewed", "dismissed"
+    status: str  # "pending", "in_progress", "reviewed", "dismissed"
 
 
 @app.patch("/api/admin/signalements/{report_id}", response_model=ReportOut)
@@ -484,6 +619,12 @@ def update_report_status(
     _admin: CurrentAdmin,
     session: Session = Depends(get_session),
 ) -> ReportOut:
+    if payload.status not in REPORT_STATUSES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Statut invalide. Valeurs acceptées : {', '.join(REPORT_STATUSES)}.",
+        )
+
     report = session.get(Report, report_id)
     if report is None:
         raise HTTPException(status_code=404, detail=f"Signalement {report_id} introuvable.")
@@ -597,6 +738,13 @@ class AdminUserApplicationOut(BaseModel):
     created_at: datetime
 
 
+class AdminUserWarningOut(BaseModel):
+    id: int
+    reason: str
+    issued_by_email: str | None
+    created_at: datetime
+
+
 class AdminUserDetail(BaseModel):
     id: int
     email: str
@@ -606,6 +754,7 @@ class AdminUserDetail(BaseModel):
     activity_verified: bool | None
     jobs: list[AdminUserJobOut]
     applications: list[AdminUserApplicationOut]
+    warnings: list[AdminUserWarningOut]
 
 
 @app.get("/api/admin/utilisateurs/{user_id}", response_model=AdminUserDetail)
@@ -626,6 +775,22 @@ def get_user_admin(
         display_name = user.employer.company_name
     else:
         display_name = user.email
+
+    warning_rows = session.execute(
+        select(Warning, User.email)
+        .outerjoin(User, User.id == Warning.issued_by)
+        .where(Warning.user_id == user_id)
+        .order_by(Warning.created_at.desc())
+    ).all()
+    warnings = [
+        AdminUserWarningOut(
+            id=warning.id,
+            reason=warning.reason,
+            issued_by_email=admin_email,
+            created_at=warning.created_at,
+        )
+        for warning, admin_email in warning_rows
+    ]
 
     jobs: list[AdminUserJobOut] = []
     applications: list[AdminUserApplicationOut] = []
@@ -683,6 +848,7 @@ def get_user_admin(
         activity_verified=user.employer.activity_verified if user.employer else None,
         jobs=jobs,
         applications=applications,
+        warnings=warnings,
     )
 
 

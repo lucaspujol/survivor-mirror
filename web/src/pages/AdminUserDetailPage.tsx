@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { ArrowLeftIcon } from 'lucide-react'
 import { PageEmpty, PageError, PageLoading } from '@/components/PageState'
@@ -20,6 +20,7 @@ import {
 import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Textarea } from '@/components/ui/textarea'
 import { useApiResource } from '@/hooks/use-api-resource'
+import { useAuth } from '@/lib/auth'
 import { api } from '@/lib/api'
 
 type UserJob = {
@@ -41,6 +42,13 @@ type UserApplication = {
   created_at: string
 }
 
+type UserWarning = {
+  id: number
+  reason: string
+  issued_by_email: string | null
+  created_at: string
+}
+
 type UserDetail = {
   id: number
   email: string
@@ -50,6 +58,7 @@ type UserDetail = {
   activity_verified: boolean | null
   jobs: UserJob[]
   applications: UserApplication[]
+  warnings: UserWarning[]
 }
 
 const roleLabels: Record<UserDetail['role'], string> = {
@@ -78,7 +87,15 @@ function labelOf(options: { value: string; label: string }[], value: string): st
 export function AdminUserDetailPage() {
   const { userId } = useParams<{ userId: string }>()
   const navigate = useNavigate()
+  const { user: currentAdmin } = useAuth()
   const { status, data, error } = useApiResource<UserDetail>(`/api/admin/utilisateurs/${userId}`)
+
+  // Mirrored locally so a freshly sent warning shows up immediately, without
+  // a full refetch — same pattern used for offers elsewhere in the app.
+  const [warnings, setWarnings] = useState<UserWarning[]>([])
+  useEffect(() => {
+    if (status === 'ready') setWarnings(data.warnings)
+  }, [status, data])
 
   const [actionError, setActionError] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
@@ -104,10 +121,19 @@ export function AdminUserDetailPage() {
     setIsWarning(true)
     setWarningError('')
     try {
-      await api(`/api/admin/utilisateurs/${userId}/avertissements`, {
-        method: 'POST',
-        body: JSON.stringify({ reason: warningReason }),
-      })
+      const created = await api<{ id: number; reason: string; created_at: string }>(
+        `/api/admin/utilisateurs/${userId}/avertissements`,
+        { method: 'POST', body: JSON.stringify({ reason: warningReason }) },
+      )
+      setWarnings((current) => [
+        {
+          id: created.id,
+          reason: created.reason,
+          issued_by_email: currentAdmin?.email ?? null,
+          created_at: created.created_at,
+        },
+        ...current,
+      ])
       setWarningOpen(false)
       setWarningReason('')
     } catch (err) {
@@ -144,6 +170,11 @@ export function AdminUserDetailPage() {
                   {data.activity_verified !== null && (
                     <Badge variant={data.activity_verified ? 'outline' : 'destructive'}>
                       {data.activity_verified ? 'Activité vérifiée' : 'Activité à vérifier'}
+                    </Badge>
+                  )}
+                  {data.role !== 'admin' && (
+                    <Badge variant={warnings.length > 0 ? 'destructive' : 'outline'}>
+                      {warnings.length} avertissement{warnings.length > 1 ? 's' : ''}
                     </Badge>
                   )}
                 </div>
@@ -223,6 +254,34 @@ export function AdminUserDetailPage() {
                 )}
               </CardContent>
             </Card>
+
+            {data.role !== 'admin' && (
+              <div>
+                <h2 className="mb-3 text-lg font-semibold">
+                  Avertissements reçus ({warnings.length})
+                </h2>
+                {warnings.length === 0 ? (
+                  <PageEmpty title="Aucun avertissement reçu." />
+                ) : (
+                  <ul className="flex flex-col gap-3">
+                    {warnings.map((warning) => (
+                      <li key={warning.id}>
+                        <Card>
+                          <CardContent className="pt-6">
+                            <p className="text-sm">{warning.reason}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Envoyé le {dateFormat.format(new Date(warning.created_at))}
+                              {' '}par{' '}
+                              {warning.issued_by_email ?? 'un compte administrateur supprimé depuis'}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
 
             {data.role === 'employer' && (
               <div>

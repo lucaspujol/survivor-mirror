@@ -9,6 +9,7 @@ import { AdminReportsPage } from '@/pages/AdminReportsPage'
 import { AdminUserDetailPage } from '@/pages/AdminUserDetailPage'
 import { AdminUsersPage } from '@/pages/AdminUsersPage'
 import { ApplicationsPage } from '@/pages/ApplicationsPage'
+import { CompanyPage } from '@/pages/CompanyPage'
 import { HomePage } from '@/pages/HomePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { MyOffersPage } from '@/pages/MyOffersPage'
@@ -25,6 +26,7 @@ function App() {
 
       <Route element={<AppLayout />}>
         <Route index element={<HomePage />} />
+        <Route path="entreprises/:employerId" element={<CompanyPage />} />
 
         <Route element={<RequireAuth />}>
           <Route path="me" element={<AccountPage />} />

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { SlidersHorizontalIcon } from 'lucide-react'
 import { FilterSidebar, type FacetKey } from '@/components/map/FilterSidebar'
 import { JobMap } from '@/components/map/JobMap'
@@ -6,7 +7,6 @@ import { OfferDetail } from '@/components/map/OfferDetail'
 import { OfferResults } from '@/components/map/OfferResults'
 import { SearchBanner } from '@/components/map/SearchBanner'
 import { CreateOfferDialog } from '@/components/offers/CreateOfferDialog'
-import { SkipLink } from '@/components/SkipLink'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
@@ -15,6 +15,7 @@ import { useOffersInBounds } from '@/hooks/use-offers-in-bounds'
 import { useAuth } from '@/lib/auth'
 import {
   EMPTY_FILTERS,
+  getOffer,
   listOffers,
   matchesFilters,
   sortOffers,
@@ -23,9 +24,6 @@ import {
   type OfferFilters,
   type SortKey,
 } from '@/lib/offers'
-
-/** Frames to wait for a pin to come back: the fly-back runs 0.6s (~40 frames). */
-const MAX_FOCUS_FRAMES = 60
 
 export function MapWorkspace() {
   const { user } = useAuth()
@@ -37,56 +35,44 @@ export function MapWorkspace() {
   const [sort, setSort] = useState<SortKey>('recent')
   const [selected, setSelected] = useState<Offer | null>(null)
   const [focusLocation, setFocusLocation] = useState<{ lat: number; lng: number } | null>(null)
-  const detailRef = useRef<HTMLDivElement>(null)
-  const mapFocusRef = useRef<{ focusMarker: (id: number) => boolean } | null>(null)
-  // Where the open offer was picked from, so closing it can return the focus
-  // to the pin or the card the reader actually left.
-  const originRef = useRef<{ id: number; from: 'map' | 'list' } | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
 
-  const selectFrom = useCallback((offer: Offer, from: 'map' | 'list') => {
-    originRef.current = { id: offer.id, from }
-    setSelected(offer)
-  }, [])
-
-  // Selecting an offer swaps the list for the detail panel further down the
-  // page: without moving focus, a keyboard user stays stranded on the pin.
+  // Deep link support: "/?offre=19" opens that offer directly, flown to on
+  // the map, instead of requiring the person to find it themselves. Used by
+  // the admin user-account page to jump straight from a job to its pin.
   useEffect(() => {
-    if (selected) detailRef.current?.focus({ preventScroll: true })
-  }, [selected])
+    const offerId = searchParams.get('offre')
+    if (!offerId) return
 
-  const handleBack = useCallback(() => {
-    const origin = originRef.current
-    originRef.current = null
-    setSelected(null)
-
-    if (!origin) return
-
-    // Closing the panel flies the map back, and Leaflet only re-attaches the
-    // pins once that settles. So a marker origin waits for its pin across the
-    // animation instead of taking the result card that is ready immediately;
-    // the card stays the fallback for a pin that never returns (clustered
-    // away, or panned out of view).
-    let attempts = 0
-    const restore = () => {
-      if (origin.from === 'map') {
-        if (mapFocusRef.current?.focusMarker(origin.id)) return
-        if (attempts++ < MAX_FOCUS_FRAMES) {
-          requestAnimationFrame(restore)
-          return
+    getOffer(Number(offerId))
+      .then((offer) => {
+        setSelected(offer)
+        if (offer.lat != null && offer.lng != null) {
+          setFocusLocation({ lat: offer.lat, lng: offer.lng })
         }
-      }
-
-      const card = document.querySelector<HTMLElement>(`[data-offer-id="${origin.id}"]`)
-      if (card) {
-        card.focus({ preventScroll: true })
-        return
-      }
-
-      if (attempts++ < MAX_FOCUS_FRAMES) requestAnimationFrame(restore)
-    }
-    requestAnimationFrame(restore)
+      })
+      .catch(() => {
+        // Deleted or invalid id in the URL: fail silently, stay on the map.
+      })
+      .finally(() => {
+        // Drop the param once consumed, so reloading the page later doesn't
+        // keep re-fetching and re-flying to the same offer forever.
+        setSearchParams(
+          (params) => {
+            params.delete('offre')
+            return params
+          },
+          { replace: true },
+        )
+      })
+    // Deliberately runs once on mount only: it depends on the URL param as it
+    // was on first load, not on searchParams after we clear it above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // "Toutes les offres" ignore la zone visible de la carte : on fait un
+  // fetch séparé, à la demande, plutôt que de mélanger ça avec le fetch par
+  // bornes qui suit les déplacements de la carte.
   const [showAllOffers, setShowAllOffers] = useState(false)
   const [allOffers, setAllOffers] = useState<Offer[]>([])
   const [isLoadingAll, setIsLoadingAll] = useState(false)
@@ -111,13 +97,17 @@ export function MapWorkspace() {
     [sourceOffers, filters, sort],
   )
 
+  // Titres et entreprises déjà chargés, comme base de suggestions pour la
+  // recherche par mots-clés — pas besoin d'un appel réseau séparé.
   const keywordSuggestions = useMemo(
     () => Array.from(new Set(sourceOffers.flatMap((offer) => [offer.title, offer.company]))),
     [sourceOffers],
   )
 
   // Focusing an offer zooms in, which would otherwise refetch a viewport
-  // holding just that offer and empty the list behind it.
+  // holding just that offer and empty the list behind it. Same idea for le
+  // mode "toutes les offres" : pas la peine de refetch par zone pendant
+  // qu'on regarde tout, sous peine de perdre ce mode au premier mouvement.
   const handleBoundsChange = useCallback(
     (bounds: Bounds) => {
       if (!selected && !showAllOffers) setBounds(bounds)
@@ -159,7 +149,10 @@ export function MapWorkspace() {
         const [lng, lat] = feature.geometry.coordinates
         setFocusLocation({ lat, lng })
       }
+      // Adresse introuvable : on laisse le dernier recentrage valide en
+      // place plutôt que de bouger la carte sur un échec silencieux.
     } catch {
+      // Panne réseau / API Adresse indisponible : idem, pas de recentrage.
     }
   }, [draft])
 
@@ -185,12 +178,9 @@ export function MapWorkspace() {
       />
 
       <div className="flex flex-col gap-8 lg:flex-row">
-        <aside className="hidden w-72 shrink-0 lg:block">
-          <SkipLink targetId="offer-results">Passer la zone des filtres</SkipLink>
-          {sidebar}
-        </aside>
+        <aside className="hidden w-72 shrink-0 lg:block">{sidebar}</aside>
 
-        <div id="offer-results" tabIndex={-1} className="flex min-w-0 flex-1 flex-col gap-4 outline-none">
+        <div className="flex min-w-0 flex-1 flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Sheet>
               <SheetTrigger
@@ -214,16 +204,11 @@ export function MapWorkspace() {
             )}
           </div>
 
-          {/* Leaflet puts every marker in the tab order, so without this the
-              keyboard crosses the whole map before reaching the results. */}
-          <SkipLink targetId="offer-list">Passer la carte</SkipLink>
-
           <div className="relative h-[26rem] overflow-hidden rounded-xl border md:h-[32rem]">
             <JobMap
               offers={visible}
               selected={selected}
-              onSelect={(offer) => selectFrom(offer, 'map')}
-              focusRef={mapFocusRef}
+              onSelect={setSelected}
               onBoundsChange={handleBoundsChange}
               focusLocation={focusLocation}
             />
@@ -239,25 +224,23 @@ export function MapWorkspace() {
             )}
           </div>
 
-          <div id="offer-list" tabIndex={-1} className="outline-none">
-            {selected ? (
-              <div ref={detailRef} tabIndex={-1} className="rounded-xl border bg-card outline-none">
-                <OfferDetail offer={selected} onBack={handleBack} />
-              </div>
-            ) : (
-              <OfferResults
-                offers={visible}
-                isLoading={showAllOffers ? isLoadingAll : isLoading}
-                sort={sort}
-                onSortChange={setSort}
-                selectedId={null}
-                onSelect={(offer) => selectFrom(offer, 'list')}
-                showingAll={showAllOffers}
-                onShowAll={handleShowAll}
-                onBackToMapArea={handleBackToMapArea}
-              />
-            )}
-          </div>
+          {selected ? (
+            <div className="rounded-xl border bg-card">
+              <OfferDetail key={selected.id} offer={selected} onBack={() => setSelected(null)} />
+            </div>
+          ) : (
+            <OfferResults
+              offers={visible}
+              isLoading={showAllOffers ? isLoadingAll : isLoading}
+              sort={sort}
+              onSortChange={setSort}
+              selectedId={null}
+              onSelect={setSelected}
+              showingAll={showAllOffers}
+              onShowAll={handleShowAll}
+              onBackToMapArea={handleBackToMapArea}
+            />
+          )}
         </div>
       </div>
     </main>
