@@ -26,7 +26,7 @@ export function AccountPage() {
       <div className="flex flex-col gap-4">
         <ProfileCard user={user} />
         <PrivacyCard />
-        <DangerZoneCard />
+        <DangerZoneCard user={user} />
       </div>
     </PageShell>
   )

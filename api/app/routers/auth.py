@@ -1,9 +1,10 @@
 from fastapi import APIRouter, HTTPException, Response, status
 from sqlalchemy import select
 
+from app import storage
 from app.config import COOKIE_NAME, get_settings
 from app.deps import CurrentUser, DbSession
-from app.models import Employer, JobSeeker, User
+from app.models import Application, Employer, Job, JobSeeker, User
 from app.schemas import EmployerRegisterIn, LoginIn, RegisterIn, UserOut
 from app.security import create_access_token, hash_password, verify_password
 
@@ -85,3 +86,39 @@ def logout(response: Response) -> None:
 @router.get("/me", response_model=UserOut)
 def me(user: CurrentUser) -> UserOut:
     return _to_user_out(user)
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+def delete_account(user: CurrentUser, db: DbSession, response: Response) -> None:
+    """Delete the signed-in account and everything attached to it.
+
+    Brief §3.3: personal data must not outlive the active use of the account,
+    and deleting it has to be possible. Every foreign key down from `users`
+    cascades, so removing the row takes the profile, the offers, the
+    applications and the document rows with it — but the database says nothing
+    about the disk, so the uploaded files are collected first and removed once
+    the delete commits.
+    """
+    # Applications to collect files for: the ones this seeker sent, plus the
+    # ones received by the offers of this employer.
+    application_ids = set(
+        db.scalars(
+            select(Application.id).where(Application.job_seeker_id == user.id)
+        ).all()
+    )
+    application_ids.update(
+        db.scalars(
+            select(Application.id)
+            .join(Job, Job.id == Application.job_id)
+            .where(Job.employer_id == user.id)
+        ).all()
+    )
+
+    db.delete(user)
+    db.commit()
+
+    for application_id in application_ids:
+        storage.delete_application_files(application_id)
+
+    # The account is gone: the cookie must not survive it.
+    response.delete_cookie(COOKIE_NAME, path="/")
