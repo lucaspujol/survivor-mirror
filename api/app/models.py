@@ -58,7 +58,7 @@ DOCUMENT_KINDS = ("cv", "cover_letter")
 # table is what actually prevents a second report from the same account, this
 # tuple only lists the accepted reasons.
 REPORT_REASONS = ("fraudulent", "non_compliant", "expired", "other")
-REPORT_STATUSES = ("pending", "in_progress", "reviewed", "dismissed")
+REPORT_STATUSES = ("pending", "reviewed", "dismissed")
 
 role_enum = Enum(*ROLES, name="user_role", native_enum=False, create_constraint=False)
 application_status_enum = Enum(
@@ -175,11 +175,6 @@ class Employer(Base):
         BigInteger, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
     )
     company_name: Mapped[str] = mapped_column(Text, nullable=False)
-    # Shown on the public company page (CompanyPage.tsx). Both nullable:
-    # existing accounts predate these fields, and there's no settings screen
-    # yet for an employer to fill them in.
-    phone: Mapped[str | None] = mapped_column(Text)
-    description: Mapped[str | None] = mapped_column(Text)
     activity_verified: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("false")
     )
