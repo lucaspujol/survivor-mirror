@@ -774,6 +774,7 @@ class AdminUserJobOut(BaseModel):
     city: str
     work_mode: str
     application_count: int
+    report_count: int
     created_at: datetime
 
 
@@ -845,14 +846,24 @@ def get_user_admin(
     applications: list[AdminUserApplicationOut] = []
 
     if user.employer is not None:
-        counts = (
+        application_counts = (
             select(Application.job_id, func.count(Application.id).label("total"))
             .group_by(Application.job_id)
             .subquery()
         )
+        report_counts = (
+            select(Report.job_id, func.count(Report.id).label("total"))
+            .group_by(Report.job_id)
+            .subquery()
+        )
         rows = session.execute(
-            select(Job, func.coalesce(counts.c.total, 0))
-            .outerjoin(counts, counts.c.job_id == Job.id)
+            select(
+                Job,
+                func.coalesce(application_counts.c.total, 0),
+                func.coalesce(report_counts.c.total, 0),
+            )
+            .outerjoin(application_counts, application_counts.c.job_id == Job.id)
+            .outerjoin(report_counts, report_counts.c.job_id == Job.id)
             .where(Job.employer_id == user.id)
             .order_by(Job.created_at.desc())
         ).all()
@@ -862,10 +873,11 @@ def get_user_admin(
                 title=job.title,
                 city=job.location_city,
                 work_mode=job.work_mode,
-                application_count=count,
+                application_count=application_count,
+                report_count=report_count,
                 created_at=job.created_at,
             )
-            for job, count in rows
+            for job, application_count, report_count in rows
         ]
 
     if user.job_seeker is not None:
