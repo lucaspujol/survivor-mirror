@@ -1,21 +1,26 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
+import { ExperienceEditor } from '@/components/account/ExperienceEditor'
 import { SkillsInput } from '@/components/account/SkillsInput'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Spinner } from '@/components/ui/spinner'
 import { ApiError } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
-import { MAX_EXPERIENCE_LENGTH, getProfile, saveProfile, type SeekerProfile } from '@/lib/profile'
+import {
+  experienceProblem,
+  getProfile,
+  saveProfile,
+  type SeekerProfile,
+} from '@/lib/profile'
 
 const EMPTY: SeekerProfile = {
   first_name: '',
   last_name: '',
   skills: [],
-  experience: null,
+  experiences: [],
   availability: null,
 }
 
@@ -59,11 +64,23 @@ export function ProfessionalProfileCard() {
     event.preventDefault()
     if (!profile) return
 
+    // An entry left half-filled would be refused by the API with a message
+    // pointing at a field number rather than at the field itself.
+    const incomplete = profile.experiences
+      .map((experience, index) => ({ index, problem: experienceProblem(experience) }))
+      .find((entry) => entry.problem !== null)
+    if (incomplete) {
+      setSaveError(
+        `Complétez l'expérience ${incomplete.index + 1} avant d'enregistrer : ${incomplete.problem}`,
+      )
+      return
+    }
+
     setSaving(true)
     setSaveError('')
     try {
       // The API trims and de-duplicates, so the saved profile is what the
-      // form should show afterwards — not what was typed.
+      // form should show afterwards - not what was typed.
       setProfile(await saveProfile(profile))
       // The name feeds display_name, shown in the sidebar and on this page.
       await refreshUser()
@@ -131,23 +148,10 @@ export function ProfessionalProfileCard() {
                 onChange={(skills) => update('skills', skills)}
               />
 
-              <Field>
-                <FieldLabel htmlFor="profile-experience">
-                  Expérience
-                  <span className="font-normal text-muted-foreground"> (facultatif)</span>
-                </FieldLabel>
-                <Textarea
-                  id="profile-experience"
-                  value={profile.experience ?? ''}
-                  onChange={(event) => update('experience', event.target.value || null)}
-                  rows={5}
-                  maxLength={MAX_EXPERIENCE_LENGTH}
-                  placeholder="Vos postes précédents, vos domaines, ce que vous cherchez."
-                />
-                <FieldDescription>
-                  {(profile.experience ?? '').length} / {MAX_EXPERIENCE_LENGTH} caractères
-                </FieldDescription>
-              </Field>
+              <ExperienceEditor
+                experiences={profile.experiences}
+                onChange={(experiences) => update('experiences', experiences)}
+              />
 
               <Field>
                 <FieldLabel htmlFor="profile-availability">

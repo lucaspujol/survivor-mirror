@@ -11,11 +11,19 @@ from sqlalchemy.orm import joinedload
 
 from app.archival import is_archived
 from app.deps import CurrentAdmin, CurrentEmployer, CurrentSeeker, DbSession
-from app.models import Application, Employer, Job, JobSeeker, User
+from app.models import (
+    Application,
+    Employer,
+    Job,
+    JobSeeker,
+    SeekerExperience,
+    User,
+)
 from app.schemas import (
     AdminUserOut,
     EmployerOfferOut,
     SeekerApplicationOut,
+    SeekerExperienceOut,
     SeekerProfileIn,
     SeekerProfileOut,
 )
@@ -48,12 +56,34 @@ def my_applications(user: CurrentSeeker, db: DbSession) -> list[SeekerApplicatio
     ]
 
 
+def _experiences_out(seeker: JobSeeker) -> list[SeekerExperienceOut]:
+    """The seeker's positions, most recent first. A position still held sorts
+    above finished ones started the same day."""
+    ordered = sorted(
+        seeker.experiences,
+        key=lambda entry: (entry.start_date, entry.end_date is None),
+        reverse=True,
+    )
+    return [
+        SeekerExperienceOut(
+            id=entry.id,
+            position=entry.position,
+            contract_type=entry.contract_type,
+            company=entry.company,
+            start_date=entry.start_date,
+            end_date=entry.end_date,
+            description=entry.description,
+        )
+        for entry in ordered
+    ]
+
+
 def _profile_out(seeker: JobSeeker) -> SeekerProfileOut:
     return SeekerProfileOut(
         first_name=seeker.first_name,
         last_name=seeker.last_name,
         skills=list(seeker.skills),
-        experience=seeker.experience,
+        experiences=_experiences_out(seeker),
         availability=seeker.availability,
     )
 
@@ -104,7 +134,21 @@ def update_my_profile(
             seen.add(skill.lower())
             skills.append(skill)
     seeker.skills = skills
-    seeker.experience = (payload.experience or "").strip() or None
+    # The whole list is replaced. Matching entries one by one would need
+    # stable ids from the form, and buys nothing: these rows carry no history.
+    seeker.experiences.clear()
+    for entry in payload.experiences:
+        seeker.experiences.append(
+            SeekerExperience(
+                position=entry.position.strip(),
+                contract_type=entry.contract_type,
+                company=entry.company.strip(),
+                start_date=entry.start_date,
+                end_date=entry.end_date,
+                description=(entry.description or "").strip() or None,
+            )
+        )
+
     seeker.availability = payload.availability
 
     db.commit()

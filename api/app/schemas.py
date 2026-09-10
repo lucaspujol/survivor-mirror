@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 
 class _RegisterBase(BaseModel):
@@ -45,6 +45,33 @@ class UserOut(BaseModel):
     created_at: datetime
 
 
+CONTRACT_TYPE = Literal["cdi", "cdd", "stage", "alternance", "interim", "freelance"]
+
+
+class SeekerExperienceIn(BaseModel):
+    """One position a job seeker declares."""
+
+    position: str = Field(min_length=1, max_length=150)
+    contract_type: CONTRACT_TYPE
+    company: str = Field(min_length=1, max_length=150)
+    start_date: date
+    # Left out while the position is still held.
+    end_date: date | None = None
+    description: str | None = Field(default=None, max_length=2000)
+
+    @model_validator(mode="after")
+    def end_after_start(self) -> "SeekerExperienceIn":
+        if self.end_date is not None and self.end_date < self.start_date:
+            raise ValueError(
+                "La date de fin ne peut pas précéder la date de début."
+            )
+        return self
+
+
+class SeekerExperienceOut(SeekerExperienceIn):
+    id: int
+
+
 class SeekerProfileOut(BaseModel):
     """The job seeker's own professional profile, as their account screen
     shows it back to them."""
@@ -52,7 +79,8 @@ class SeekerProfileOut(BaseModel):
     first_name: str
     last_name: str
     skills: list[str]
-    experience: str | None
+    # Most recent position first.
+    experiences: list[SeekerExperienceOut]
     availability: date | None
 
 
@@ -70,7 +98,7 @@ class SeekerProfileIn(BaseModel):
     # duplicates are dropped by the route rather than rejected, since they say
     # nothing the job seeker meant.
     skills: list[str] = Field(default_factory=list, max_length=30)
-    experience: str | None = Field(default=None, max_length=5000)
+    experiences: list[SeekerExperienceIn] = Field(default_factory=list, max_length=30)
     availability: date | None = None
 
 
@@ -130,7 +158,7 @@ class EmployerApplicantOut(BaseModel):
     phone: str | None
     message: str | None
     skills: list[str]
-    experience: str | None
+    experiences: list[SeekerExperienceOut]
     availability: date | None
     documents: list[ApplicationDocumentOut]
     created_at: datetime

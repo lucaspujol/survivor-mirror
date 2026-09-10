@@ -62,7 +62,7 @@ stored.
 
 ### `job_seekers`
 
-The job seeker's professional profile, 1–1 with `users` (`user_id` is both the
+The job seeker's professional profile, 1-1 with `users` (`user_id` is both the
 primary key and a foreign key, `ON DELETE CASCADE`).
 
 | Column | Type | Constraints |
@@ -75,7 +75,7 @@ primary key and a foreign key, `ON DELETE CASCADE`).
 
 ### `employers`
 
-Same 1–1 relationship with `users`. `activity_verified` records the platform
+Same 1-1 relationship with `users`. `activity_verified` records the platform
 operator's validation of the company's activity.
 
 ### `jobs`

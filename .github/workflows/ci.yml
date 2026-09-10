@@ -83,7 +83,7 @@ jobs:
           tables=$(docker compose exec -T db psql -U geoemploi -d geoemploi -tAc \
             "SELECT string_agg(tablename, ',' ORDER BY tablename) FROM pg_tables WHERE schemaname = 'public';")
           echo "public tables: $tables"
-          expected="alembic_version,application_documents,applications,employers,job_seekers,jobs,reports,spatial_ref_sys,users,warnings"
+          expected="alembic_version,application_documents,applications,employers,job_seekers,jobs,reports,seeker_experiences,spatial_ref_sys,users,warnings"
           [ "$tables" = "$expected" ] || { echo "expected: $expected" >&2; exit 1; }
 
           extensions=$(docker compose exec -T db psql -U geoemploi -d geoemploi -tAc \
@@ -100,7 +100,7 @@ jobs:
         run: docker compose down -v
 
   demo-build:
-    name: Demo build — bundle, smoke test & artifact
+    name: Demo build - bundle, smoke test & artifact
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
@@ -190,7 +190,7 @@ jobs:
     # Proves the published artifact works, not just the build job's working
     # directory: this job never checks out the repository sources, it only
     # downloads what a person would download from the run page.
-    name: Artifact — download, run & verify
+    name: Artifact - download, run & verify
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: demo-build
