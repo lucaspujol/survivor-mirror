@@ -83,7 +83,7 @@ jobs:
           tables=$(docker compose exec -T db psql -U geoemploi -d geoemploi -tAc \
             "SELECT string_agg(tablename, ',' ORDER BY tablename) FROM pg_tables WHERE schemaname = 'public';")
           echo "public tables: $tables"
-          expected="alembic_version,application_documents,applications,employers,job_seekers,jobs,reports,spatial_ref_sys,users,warnings"
+          expected="alembic_version,application_documents,applications,employers,job_seekers,jobs,reports,seeker_experiences,spatial_ref_sys,users,warnings"
           [ "$tables" = "$expected" ] || { echo "expected: $expected" >&2; exit 1; }
 
           extensions=$(docker compose exec -T db psql -U geoemploi -d geoemploi -tAc \

@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { CalendarIcon, MailIcon, PhoneIcon } from 'lucide-react'
 import { DocumentList } from '@/components/applications/DocumentList'
+import { ContractBadge } from '@/components/offers/ContractBadge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { ApiError, api } from '@/lib/api'
+import { formatPeriod } from '@/lib/profile'
 import {
   STATUS_LABELS,
   STATUS_ORDER,
@@ -100,12 +102,28 @@ export function ApplicantCard({ applicant, onStatusChanged }: ApplicantCardProps
           </div>
         )}
 
-        {applicant.experience && (
+        {applicant.experiences.length > 0 && (
           <div>
-            <h4 className="text-sm font-medium">Expérience</h4>
-            <p className="mt-1 text-sm whitespace-pre-line text-muted-foreground">
-              {applicant.experience}
-            </p>
+            <h4 className="text-sm font-medium">Expériences professionnelles</h4>
+            <ul className="mt-2 flex flex-col gap-3">
+              {applicant.experiences.map((experience) => (
+                <li key={experience.id} className="border-l-2 pl-3">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="text-sm font-medium">{experience.position}</span>
+                    <ContractBadge type={experience.contract_type} duration={null} />
+                  </div>
+                  <p className="text-sm text-muted-foreground">{experience.company}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatPeriod(experience)}
+                  </p>
+                  {experience.description && (
+                    <p className="mt-1 text-sm whitespace-pre-line">
+                      {experience.description}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 

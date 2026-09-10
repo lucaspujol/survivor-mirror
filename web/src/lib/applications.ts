@@ -1,3 +1,5 @@
+import type { SeekerExperience } from '@/lib/profile'
+
 /** Applications, as the two sides of the exchange see them. */
 
 export type ApplicationStatus = 'sent' | 'under_review' | 'accepted' | 'rejected'
@@ -47,7 +49,7 @@ export type Applicant = {
   phone: string | null
   message: string | null
   skills: string[]
-  experience: string | null
+  experiences: SeekerExperience[]
   availability: string | null
   documents: ApplicationDocument[]
   created_at: string

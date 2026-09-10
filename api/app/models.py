@@ -156,8 +156,6 @@ class JobSeeker(Base):
     skills: Mapped[list[str]] = mapped_column(
         ARRAY(Text), nullable=False, server_default=text("'{}'::text[]")
     )
-    # Work experience, entered as free text by the job seeker.
-    experience: Mapped[str | None] = mapped_column(Text)
     # Date the job seeker becomes available.
     availability: Mapped[date | None] = mapped_column(Date)
 
@@ -165,6 +163,53 @@ class JobSeeker(Base):
     applications: Mapped[list["Application"]] = relationship(
         back_populates="job_seeker", cascade="all, delete-orphan"
     )
+    experiences: Mapped[list["SeekerExperience"]] = relationship(
+        back_populates="job_seeker",
+        cascade="all, delete-orphan",
+        order_by="SeekerExperience.start_date.desc()",
+    )
+
+
+class SeekerExperience(Base):
+    """One position held by a job seeker.
+
+    Experience used to be a single free-text column, which turned into an
+    unreadable wall as soon as someone had held more than a couple of jobs.
+    One row per position lets the employer scan a career instead of reading a
+    paragraph, and lets the seeker edit one entry without retyping the rest.
+    """
+
+    __tablename__ = "seeker_experiences"
+    __table_args__ = (
+        CheckConstraint(
+            _in_check("contract_type", CONTRACT_TYPES),
+            name="ck_seeker_experiences_contract_type",
+        ),
+        # A position cannot end before it started. NULL end_date means the
+        # position is still held, so it escapes the check.
+        CheckConstraint(
+            "end_date IS NULL OR end_date >= start_date",
+            name="ck_seeker_experiences_dates_ordered",
+        ),
+        Index("ix_seeker_experiences_job_seeker_id", "job_seeker_id"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    job_seeker_id: Mapped[int] = mapped_column(
+        BigInteger,
+        ForeignKey("job_seekers.user_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    # Job title, as the seeker words it.
+    position: Mapped[str] = mapped_column(Text, nullable=False)
+    contract_type: Mapped[str] = mapped_column(contract_type_enum, nullable=False)
+    company: Mapped[str] = mapped_column(Text, nullable=False)
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
+    # NULL while the position is still held.
+    end_date: Mapped[date | None] = mapped_column(Date)
+    description: Mapped[str | None] = mapped_column(Text)
+
+    job_seeker: Mapped[JobSeeker] = relationship(back_populates="experiences")
 
 class Employer(Base):
     """Employer account publishing job offers."""
