@@ -6,13 +6,22 @@ Ownership is checked on every route, so an id guessed from another account's
 screen returns 404 rather than someone else's personal data.
 """
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+    status,
+)
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload, selectinload
 
 from app import storage
 from app.archival import is_archived
+from app.mail import notify_new_application
 from app.deps import CurrentEmployer, CurrentSeeker, CurrentUser, DbSession
 from app.routers.dashboard import _experiences_out
 from app.models import Application, ApplicationDocument, Job, JobSeeker
@@ -92,6 +101,7 @@ def _applicant(application: Application, seeker: JobSeeker) -> EmployerApplicant
 def apply_to_offer(
     user: CurrentSeeker,
     db: DbSession,
+    background: BackgroundTasks,
     # multipart/form-data: the form carries files, so its scalar fields arrive
     # as form parts rather than as a JSON body.
     job_id: int = Form(...),
@@ -168,6 +178,18 @@ def apply_to_offer(
         raise
 
     db.refresh(application)
+
+    # Read before queueing: the session closes when the request ends, and the
+    # background task would otherwise walk job -> employer -> user on a
+    # detached instance.
+    employer_email = job.employer.user.email
+    job_title = job.title
+
+    # Queued after the commit, so a mail only goes out for an application that
+    # is actually stored, and off the request path: the candidate's answer must
+    # not wait on an SMTP round trip, nor fail if the mail server is down.
+    background.add_task(notify_new_application, employer_email, job_title)
+
     return _seeker_detail(application)
 
 

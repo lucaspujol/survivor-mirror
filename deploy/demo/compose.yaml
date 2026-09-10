@@ -38,6 +38,10 @@ services:
       JWT_EXPIRE_DAYS: 7
       COOKIE_SECURE: false
       UPLOADS_DIR: /app/uploads
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      # nginx serves the application on 8080 in this stack, not 5173.
+      APP_BASE_URL: http://localhost:8080
     volumes:
       # The CVs and cover letters attached to an application live on disk, not
       # in the database. Without this volume they would sit in the container's
@@ -49,6 +53,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     healthcheck:
       test:
         - CMD
@@ -59,6 +65,14 @@ services:
       timeout: 5s
       retries: 20
       start_period: 40s
+
+  # Captures the notification mails instead of delivering them, and serves
+  # them on http://localhost:8025. A demo can show the employer being notified
+  # without a real mail server, and nothing ever leaves the machine.
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports:
+      - "8025:8025"
 
   web:
     # nginx serving the compiled frontend and proxying /api to the API, so the

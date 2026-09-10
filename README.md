@@ -32,6 +32,11 @@ docker compose up --build -V  # after adding a dependency
 | API | http://localhost:8000/api/health |
 | Swagger | http://localhost:8000/api/docs |
 | PostgreSQL | localhost:5433 |
+| Mailbox (mailpit) | http://localhost:8025 |
+
+Notification mails are captured by [mailpit](https://mailpit.axllent.org/) and
+read at the address above: the stack never delivers mail to a real address.
+Leave `SMTP_HOST` empty to disable notifications altogether.
 
 Alembic migrations are applied automatically when the API starts. The schema
 and the migration commands are documented in [docs/database.md](docs/database.md).
