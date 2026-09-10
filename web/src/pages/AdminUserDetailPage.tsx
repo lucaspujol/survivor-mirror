@@ -172,11 +172,6 @@ export function AdminUserDetailPage() {
                       {data.activity_verified ? 'Activité vérifiée' : 'Activité à vérifier'}
                     </Badge>
                   )}
-                  {data.role !== 'admin' && (
-                    <Badge variant={warnings.length > 0 ? 'destructive' : 'outline'}>
-                      {warnings.length} avertissement{warnings.length > 1 ? 's' : ''}
-                    </Badge>
-                  )}
                 </div>
                 <p className="text-sm text-muted-foreground">{data.email}</p>
                 <p className="text-xs text-muted-foreground">

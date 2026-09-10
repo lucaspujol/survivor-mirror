@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import {
   CalendarClockIcon,
   ClockIcon,
@@ -33,7 +34,11 @@ export function MyOfferCard({ offer, onSaved, onDeleted }: MyOfferCardProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-primary">{offer.title}</CardTitle>
+        <CardTitle>
+          <Link to={`/?offre=${offer.id}`} className="text-primary hover:underline">
+            {offer.title}
+          </Link>
+        </CardTitle>
         <CardAction className="flex flex-wrap gap-2">
           <OfferApplicantsDialog offer={offer} />
           <EditOfferDialog offer={offer} onSaved={onSaved} />

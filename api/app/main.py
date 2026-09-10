@@ -8,7 +8,7 @@ from geoalchemy2.shape import from_shape, to_shape
 from pydantic import BaseModel, model_validator
 from pyproj import Transformer
 from shapely.geometry import Point
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 from app.archival import archival_cutoff
@@ -137,20 +137,25 @@ def list_offers(
     east: float | None = None,
     session: Session = Depends(get_session),
 ) -> list[JobOffer]:
-    # Fully remote offers have no position: excluded from the map by
-    # construction (isnot(None)), but still visible in the employer's own
-    # "Mes offres" list.
+    # Fully remote offers have no position, so they can never get a pin —
+    # but that's a map-only limitation, not a reason to hide them from the
+    # results list entirely. Bounds filtering below only applies to offers
+    # that actually have a location; remote ones stay in every viewport.
     query = (
         select(Job)
         .options(joinedload(Job.employer))
-        .where(Job.location.isnot(None))
+        .where(or_(Job.location.isnot(None), Job.work_mode == "remote"))
         # Archived offers leave the map: they are no longer open to apply to.
         .where(Job.created_at > archival_cutoff())
     )
 
     if south is not None and west is not None and north is not None and east is not None:
         envelope = ST_MakeEnvelope(west, south, east, north, 4326)
-        query = query.where(func.ST_Within(Job.location, envelope))
+        # Remote offers aren't "inside" or "outside" any viewport — a map pan
+        # shouldn't make them appear and disappear from the list below it.
+        query = query.where(
+            or_(Job.work_mode == "remote", func.ST_Within(Job.location, envelope))
+        )
 
     jobs = session.execute(query).scalars().all()
     return [job_to_offer(job) for job in jobs]
@@ -549,7 +554,7 @@ def list_reports_grouped_by_offer(
             .where(Warning.user_id.in_(employer_ids))
             .group_by(Warning.user_id)
         ).all()
-        warning_counts = dict(rows)
+        warning_counts = {user_id: count for user_id, count in rows}
 
     result = []
     for job_id, group in groups.items():

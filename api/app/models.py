@@ -175,6 +175,11 @@ class Employer(Base):
         BigInteger, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
     )
     company_name: Mapped[str] = mapped_column(Text, nullable=False)
+    # Shown on the public company page (CompanyPage.tsx). Both nullable:
+    # existing accounts predate these fields, and there's no settings screen
+    # yet for an employer to fill them in.
+    phone: Mapped[str | None] = mapped_column(Text)
+    description: Mapped[str | None] = mapped_column(Text)
     activity_verified: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("false")
     )
