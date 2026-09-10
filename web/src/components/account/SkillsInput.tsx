@@ -83,7 +83,7 @@ export function SkillsInput({ skills, onChange }: SkillsInputProps) {
       </div>
 
       <FieldDescription id={`${inputId}-hint`}>
-        {skills.length} / {MAX_SKILLS} — appuyez sur Entrée pour ajouter.
+        {skills.length} / {MAX_SKILLS} - appuyez sur Entrée pour ajouter.
       </FieldDescription>
     </div>
   )

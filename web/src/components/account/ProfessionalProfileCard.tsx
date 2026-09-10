@@ -80,7 +80,7 @@ export function ProfessionalProfileCard() {
     setSaveError('')
     try {
       // The API trims and de-duplicates, so the saved profile is what the
-      // form should show afterwards — not what was typed.
+      // form should show afterwards - not what was typed.
       setProfile(await saveProfile(profile))
       // The name feeds display_name, shown in the sidebar and on this page.
       await refreshUser()

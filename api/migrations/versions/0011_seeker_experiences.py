@@ -102,7 +102,7 @@ def downgrade() -> None:
         FROM (
             SELECT job_seeker_id,
                    string_agg(
-                       position || ' — ' || company
+                       position || ' - ' || company
                        || COALESCE(E'\\n' || description, ''),
                        E'\\n\\n' ORDER BY start_date DESC
                    ) AS text

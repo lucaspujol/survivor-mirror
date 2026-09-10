@@ -54,7 +54,7 @@ export function experienceProblem(experience: SeekerExperience): string | null {
   return null
 }
 
-/** "mars 2022 — aujourd'hui", the way a CV reads. */
+/** "mars 2022 - aujourd'hui", the way a CV reads. */
 export function formatPeriod(experience: SeekerExperience): string {
   const month = (iso: string) =>
     new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(
@@ -62,7 +62,7 @@ export function formatPeriod(experience: SeekerExperience): string {
     )
   const start = experience.start_date ? month(experience.start_date) : ''
   const end = experience.end_date ? month(experience.end_date) : "aujourd'hui"
-  return `${start} — ${end}`
+  return `${start} - ${end}`
 }
 
 export function getProfile(): Promise<SeekerProfile> {

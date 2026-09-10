@@ -22,7 +22,7 @@ type ExperienceEditorProps = {
 
 /**
  * Work experience as one block per position. A finished entry is folded down
- * to a summary — a career of six jobs stays readable — and reopens on the
+ * to a summary - a career of six jobs stays readable - and reopens on the
  * pencil. Nothing here writes: the card's own button saves the whole profile.
  */
 export function ExperienceEditor({ experiences, onChange }: ExperienceEditorProps) {

@@ -100,7 +100,7 @@ jobs:
         run: docker compose down -v
 
   demo-build:
-    name: Demo build — bundle, smoke test & artifact
+    name: Demo build - bundle, smoke test & artifact
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
@@ -190,7 +190,7 @@ jobs:
     # Proves the published artifact works, not just the build job's working
     # directory: this job never checks out the repository sources, it only
     # downloads what a person would download from the run page.
-    name: Artifact — download, run & verify
+    name: Artifact - download, run & verify
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: demo-build
