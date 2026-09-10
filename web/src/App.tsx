@@ -9,6 +9,7 @@ import { AdminReportsPage } from '@/pages/AdminReportsPage'
 import { AdminUserDetailPage } from '@/pages/AdminUserDetailPage'
 import { AdminUsersPage } from '@/pages/AdminUsersPage'
 import { ApplicationsPage } from '@/pages/ApplicationsPage'
+import { BrandGuidelinesPage } from '@/pages/BrandGuidelinesPage'
 import { CGUPage } from '@/pages/CGUPage'
 import { CompanyPage } from '@/pages/CompanyPage'
 import { ConfidentialityPage } from '@/pages/ConfidentialityPage'
@@ -36,6 +37,7 @@ function App() {
         <Route path="cgu" element={<CGUPage />} />
         <Route path="mentions-legales" element={<LegalNoticePage />} />
         <Route path="confidentialite" element={<ConfidentialityPage />} />
+        <Route path="charte-graphique" element={<BrandGuidelinesPage />} />
 
         <Route element={<RequireAuth />}>
           <Route path="me" element={<AccountPage />} />

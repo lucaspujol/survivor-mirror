@@ -15,6 +15,9 @@ export function Footer() {
           <Link to="/confidentialite" className="hover:text-primary hover:underline">
             Confidentialité
           </Link>
+          <Link to="/charte-graphique" className="hover:text-primary hover:underline">
+            Charte graphique
+          </Link>
         </nav>
       </div>
     </footer>
