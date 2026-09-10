@@ -109,7 +109,7 @@ export function ApplyDialog({ jobId, jobTitle, company, onApplied }: ApplyDialog
         <DialogHeader>
           <DialogTitle>Postuler à cette offre</DialogTitle>
           <DialogDescription>
-            {jobTitle} — {company}
+            {jobTitle} - {company}
           </DialogDescription>
         </DialogHeader>
 

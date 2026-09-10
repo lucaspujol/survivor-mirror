@@ -1,6 +1,6 @@
 import { Outlet, useLocation } from 'react-router'
 import { AppSidebar } from '@/components/app-sidebar'
-import { DemoNotice } from '@/components/layout/DemoNotice'
+import { Footer } from './Footer'
 import { Separator } from '@/components/ui/separator'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { Toaster } from '@/components/ui/sonner'
@@ -24,7 +24,7 @@ export function AppLayout() {
             <div className="flex-1">
               <Outlet />
             </div>
-            <DemoNotice />
+            <Footer />
           </div>
         </SidebarInset>
         <Toaster theme="light" position="bottom-right" />

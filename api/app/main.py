@@ -137,7 +137,7 @@ def list_offers(
     east: float | None = None,
     session: Session = Depends(get_session),
 ) -> list[JobOffer]:
-    # Fully remote offers have no position, so they can never get a pin —
+    # Fully remote offers have no position, so they can never get a pin -
     # but that's a map-only limitation, not a reason to hide them from the
     # results list entirely. Bounds filtering below only applies to offers
     # that actually have a location; remote ones stay in every viewport.
@@ -151,7 +151,7 @@ def list_offers(
 
     if south is not None and west is not None and north is not None and east is not None:
         envelope = ST_MakeEnvelope(west, south, east, north, 4326)
-        # Remote offers aren't "inside" or "outside" any viewport — a map pan
+        # Remote offers aren't "inside" or "outside" any viewport - a map pan
         # shouldn't make them appear and disappear from the list below it.
         query = query.where(
             or_(Job.work_mode == "remote", func.ST_Within(Job.location, envelope))
@@ -248,7 +248,7 @@ class OfferCreate(BaseModel):
     title: str
     description: str
     contract_type: str  # "cdi", "cdd", "stage", "alternance", "interim", "freelance"
-    contract_duration: str | None = None  # e.g. "3 months" — relevant outside CDI
+    contract_duration: str | None = None  # e.g. "3 months" - relevant outside CDI
     work_mode: str  # "on_site", "hybrid", "remote"
     time_commitment: str  # "full_time", "part_time"
     address: str | None = None  # required unless work_mode == "remote"
@@ -432,7 +432,7 @@ def update_offer(
         job.location_status = "geocoded"
     # NB: switching from "remote" to "on_site"/"hybrid" WITHOUT providing a
     # new address in the same request leaves the offer without a position.
-    # Not handled here — to be enforced client-side by requiring the address
+    # Not handled here - to be enforced client-side by requiring the address
     # as soon as the chosen mode is no longer "remote".
 
     session.commit()

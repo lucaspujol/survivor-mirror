@@ -1,4 +1,4 @@
-# GéoEmploi — demo build
+# GéoEmploi - demo build
 
 This directory is the `geoemploi-demo-build` artifact produced by GitHub
 Actions. It contains the **compiled** frontend, the API sources with their
@@ -56,21 +56,21 @@ it cannot be registered and no mail can ever reach it.
 
 ## Demo walkthrough
 
-1. Open http://localhost:8080 — the map shows the seeded offers across France,
+1. Open http://localhost:8080 - the map shows the seeded offers across France,
    clustered; zooming refetches only the visible bounds.
 2. Click a marker: the popup gives the job title and the company. Signed out,
    the page invites you to sign in as an employer to publish.
-3. Sign in as `candidat@demo.geoemploi.example` — the sidebar shows
+3. Sign in as `candidat@demo.geoemploi.example` - the sidebar shows
    *Mes candidatures*, listing Camille Fontaine's three applications with the
    offer, the company, the city, the status and the dates.
-4. Sign in as `employeur@demo.geoemploi.example` — the sidebar shows
+4. Sign in as `employeur@demo.geoemploi.example` - the sidebar shows
    *Mes offres*, listing the two offers of *Numérique Océan* and the
    applications each has received. The publish form appears under the map.
 5. Publish an offer from that form. The address field autocompletes through
    the government Adresse API, so this step needs internet access; the offer
    is attached to the signed-in employer and the new marker appears without a
    reload.
-6. Sign in as `admin@demo.geoemploi.example` — the *Administration* section
+6. Sign in as `admin@demo.geoemploi.example` - the *Administration* section
    appears with *Utilisateurs*, the read-only list of the 15 accounts, their
    role and their activity.
 
