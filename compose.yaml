@@ -29,6 +29,9 @@ services:
       JWT_EXPIRE_DAYS: ${JWT_EXPIRE_DAYS:-7}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       UPLOADS_DIR: /app/uploads
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:5173}
     volumes:
       - ./api:/app
       # CVs and cover letters live on disk, not in the base: a named volume
@@ -39,6 +42,16 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      mailpit:
+        condition: service_started
+
+  # Captures every mail the API sends instead of delivering it, and serves
+  # them on http://localhost:8025. Nothing leaves the machine, so a demo can
+  # show the employer notification without touching a real mailbox.
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports:
+      - "${MAILPIT_UI_PORT:-8025}:8025"
 
   web:
     build: ./web

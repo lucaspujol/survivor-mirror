@@ -27,6 +27,11 @@ First run takes a few minutes (image downloads); later runs take seconds.
 | Application | http://localhost:8080 |
 | API health | http://localhost:8000/api/health |
 | Swagger | http://localhost:8000/api/docs |
+| Boîte mail de démo | http://localhost:8025 |
+
+The stack runs [mailpit](https://mailpit.axllent.org/), which captures the
+notification mails instead of delivering them: nothing is ever sent to a real
+address, and no mail account is needed to run the demo.
 
 Stop with `docker compose down`, or `docker compose down -v` to also drop the
 database and start again from a blank one.
@@ -63,14 +68,20 @@ it cannot be registered and no mail can ever reach it.
 3. Sign in as `candidat@demo.geoemploi.example` - the sidebar shows
    *Mes candidatures*, listing Camille Fontaine's three applications with the
    offer, the company, the city, the status and the dates.
-4. Sign in as `employeur@demo.geoemploi.example` - the sidebar shows
+4. Still signed in as the job seeker, open an offer from the map and click
+   *Postuler*: fill in the form, attach a CV, and send. The application
+   appears in *Mes candidatures*, and the employer is notified by mail -
+   open http://localhost:8025 to read it. The mail names the offer and links
+   back to the employer's dashboard; it deliberately carries no name, phone
+   number or attachment, so nothing personal leaves the platform.
+5. Sign in as `employeur@demo.geoemploi.example` - the sidebar shows
    *Mes offres*, listing the two offers of *Numérique Océan* and the
    applications each has received. The publish form appears under the map.
-5. Publish an offer from that form. The address field autocompletes through
+6. Publish an offer from that form. The address field autocompletes through
    the government Adresse API, so this step needs internet access; the offer
    is attached to the signed-in employer and the new marker appears without a
    reload.
-6. Sign in as `admin@demo.geoemploi.example` - the *Administration* section
+7. Sign in as `admin@demo.geoemploi.example` - the *Administration* section
    appears with *Utilisateurs*, the read-only list of the 15 accounts, their
    role and their activity.
 
