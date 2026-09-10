@@ -49,11 +49,16 @@ CONTRACT_TYPES = ("cdi", "cdd", "stage", "alternance", "interim", "freelance")
 # constraint already allows (it only constrains the 'geocoded' status).
 WORK_MODES = ("on_site", "hybrid", "remote")
 # Independent from WORK_MODES: a job can be full-time remote, part-time
-# on-site, etc. - the two dimensions don't overlap.
+# on-site, etc. — the two dimensions don't overlap.
 TIME_COMMITMENTS = ("full_time", "part_time")
 # Files a candidate attaches to an application. The CV is required, the cover
 # letter optional; one document of each kind per application at most.
 DOCUMENT_KINDS = ("cv", "cover_letter")
+# A report is tied to one (job, reporter) pair — the unique constraint on the
+# table is what actually prevents a second report from the same account, this
+# tuple only lists the accepted reasons.
+REPORT_REASONS = ("fraudulent", "non_compliant", "expired", "other")
+REPORT_STATUSES = ("pending", "reviewed", "dismissed")
 
 role_enum = Enum(*ROLES, name="user_role", native_enum=False, create_constraint=False)
 application_status_enum = Enum(
@@ -68,7 +73,6 @@ location_status_enum = Enum(
     native_enum=False,
     create_constraint=False,
 )
-
 contract_type_enum = Enum(
     *CONTRACT_TYPES,
     name="contract_type",
@@ -90,6 +94,18 @@ time_commitment_enum = Enum(
 document_kind_enum = Enum(
     *DOCUMENT_KINDS,
     name="document_kind",
+    native_enum=False,
+    create_constraint=False,
+)
+report_reason_enum = Enum(
+    *REPORT_REASONS,
+    name="report_reason",
+    native_enum=False,
+    create_constraint=False,
+)
+report_status_enum = Enum(
+    *REPORT_STATUSES,
+    name="report_status",
     native_enum=False,
     create_constraint=False,
 )
@@ -159,6 +175,11 @@ class Employer(Base):
         BigInteger, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
     )
     company_name: Mapped[str] = mapped_column(Text, nullable=False)
+    # Shown on the public company page (CompanyPage.tsx). Both nullable:
+    # existing accounts predate these fields, and there's no settings screen
+    # yet for an employer to fill them in.
+    phone: Mapped[str | None] = mapped_column(Text)
+    description: Mapped[str | None] = mapped_column(Text)
     activity_verified: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("false")
     )
@@ -228,7 +249,7 @@ class Job(Base):
     contract_type: Mapped[str] = mapped_column(
         contract_type_enum, nullable=False, server_default=text("'cdi'")
     )
-    # Free text, e.g. "3 mois" - relevant for cdd/stage/alternance/interim,
+    # Free text, e.g. "3 mois" — relevant for cdd/stage/alternance/interim,
     # left null for cdi/freelance.
     contract_duration: Mapped[str | None] = mapped_column(Text)
     # "on_site" / "hybrid" / "remote". A fully remote offer has no location
@@ -237,8 +258,8 @@ class Job(Base):
     work_mode: Mapped[str] = mapped_column(
         work_mode_enum, nullable=False, server_default=text("'on_site'")
     )
-    # "full_time" / "part_time" - indépendant de work_mode : un poste peut
-    # être à la fois temps plein et télétravail, ou temps partiel et sur site.
+    # "full_time" / "part_time" — independent from work_mode: a job can be
+    # both full-time and remote, or part-time and on-site.
     time_commitment: Mapped[str] = mapped_column(
         time_commitment_enum, nullable=False, server_default=text("'full_time'")
     )
@@ -360,3 +381,62 @@ class ApplicationDocument(Base):
     )
 
     application: Mapped[Application] = relationship(back_populates="documents")
+
+class Report(Base):
+    """A signed-in user's report against an offer (fraudulent, non-compliant...).
+
+    One report per (job, reporter) pair — the unique constraint below is what
+    actually prevents a second report from the same account, not client-side
+    validation, which could always be bypassed by calling the API directly.
+    """
+
+    __tablename__ = "reports"
+    __table_args__ = (
+        UniqueConstraint("job_id", "reporter_id", name="uq_reports_job_reporter"),
+        CheckConstraint(_in_check("reason", REPORT_REASONS), name="ck_reports_reason"),
+        CheckConstraint(_in_check("status", REPORT_STATUSES), name="ck_reports_status"),
+        Index("ix_reports_job_id", "job_id"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    job_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False
+    )
+    # Any signed-in account (seeker or employer) may report — not restricted
+    # to a single role, unlike Application/JobSeeker.
+    reporter_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    reason: Mapped[str] = mapped_column(report_reason_enum, nullable=False)
+    comment: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(
+        report_status_enum, nullable=False, server_default=text("'pending'")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    job: Mapped[Job] = relationship()
+    reporter: Mapped[User] = relationship()
+
+class Warning(Base):
+    """A warning an admin issues to a user account, after reviewing a report."""
+
+    __tablename__ = "warnings"
+    __table_args__ = (Index("ix_warnings_user_id", "user_id"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    # Nullable: the issuing admin account may later be removed without losing
+    # the warning itself, only the attribution.
+    issued_by: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    user: Mapped[User] = relationship(foreign_keys=[user_id])

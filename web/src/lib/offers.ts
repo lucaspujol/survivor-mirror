@@ -39,6 +39,10 @@ export function listOffers(bounds?: Bounds): Promise<Offer[]> {
   return api<Offer[]>(`/api/offres${query}`)
 }
 
+export function getOffer(id: number): Promise<Offer> {
+  return api<Offer>(`/api/offres/${id}`)
+}
+
 export function daysSince(iso: string): number {
   const elapsed = Date.now() - new Date(iso).getTime()
   return Math.floor(elapsed / 86_400_000)

@@ -4,8 +4,12 @@ import { AuthLayout } from '@/components/layout/AuthLayout'
 import { RequireAuth } from '@/components/layout/RequireAuth'
 import { RequireRole } from '@/components/layout/RequireRole'
 import { AccountPage } from '@/pages/AccountPage'
+import { AdminReportDetailPage } from '@/pages/AdminReportDetailPage'
+import { AdminReportsPage } from '@/pages/AdminReportsPage'
+import { AdminUserDetailPage } from '@/pages/AdminUserDetailPage'
 import { AdminUsersPage } from '@/pages/AdminUsersPage'
 import { ApplicationsPage } from '@/pages/ApplicationsPage'
+import { CompanyPage } from '@/pages/CompanyPage'
 import { HomePage } from '@/pages/HomePage'
 import { LoginPage } from '@/pages/LoginPage'
 import { MyOffersPage } from '@/pages/MyOffersPage'
@@ -22,6 +26,7 @@ function App() {
 
       <Route element={<AppLayout />}>
         <Route index element={<HomePage />} />
+        <Route path="entreprises/:employerId" element={<CompanyPage />} />
 
         <Route element={<RequireAuth />}>
           <Route path="me" element={<AccountPage />} />
@@ -39,6 +44,9 @@ function App() {
 
         <Route element={<RequireRole roles={['admin']} />}>
           <Route path="admin/utilisateurs" element={<AdminUsersPage />} />
+          <Route path="admin/utilisateurs/:userId" element={<AdminUserDetailPage />} />
+          <Route path="admin/signalements" element={<AdminReportsPage />} />
+          <Route path="admin/signalements/:offerId" element={<AdminReportDetailPage />} />
         </Route>
 
         <Route path="introuvable" element={<NotFoundPage />} />

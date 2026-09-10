@@ -1,3 +1,4 @@
+import { Link } from 'react-router'
 import { ApplicationDetailDialog } from '@/components/applications/ApplicationDetailDialog'
 import { PageEmpty, PageError, PageLoading } from '@/components/PageState'
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -39,7 +40,9 @@ export function ApplicationsPage() {
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                        <span>{application.job_title}</span>
+                        <Link to={`/?offre=${application.job_id}`} className="hover:underline">
+                          {application.job_title}
+                        </Link>
                         <span
                           className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[application.status]}`}
                         >

@@ -1,7 +1,7 @@
 """Application form details and attached documents
 
-Revision ID: 0005_application_details
-Revises: 0004_add_time_commitment
+Revision ID: 0009_application_details
+Revises: 0008_employer_contact_info
 Create Date: 2026-09-08
 
 """
@@ -10,8 +10,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0005_application_details"
-down_revision: str | None = "0004_add_time_commitment"
+revision: str = "0009_application_details"
+down_revision: str | None = "0008_employer_contact_info"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

@@ -66,6 +66,10 @@ function FocusOffer({ offer }: { offer: Offer | null }) {
       return
     }
 
+    // Remote offers have no position — nothing to fly to, and Leaflet
+    // throws on flyTo(null, null) if this isn't guarded.
+    if (offer.lat == null || offer.lng == null) return
+
     previousViewRef.current ??= { center: map.getCenter(), zoom: map.getZoom() }
     map.flyTo([offer.lat, offer.lng], Math.max(map.getZoom(), FOCUS_ZOOM), {
       duration: 0.6,
@@ -187,6 +191,11 @@ export function JobMap({
     [],
   )
 
+  // Remote offers have no coordinates: they can never get a pin. Filtered
+  // here rather than upstream, so every other consumer of `offers` (the
+  // results list, the filter counts) still sees them.
+  const mappableOffers = offers.filter((offer) => offer.lat != null && offer.lng != null)
+
   return (
     <div className="relative isolate h-full w-full">
       <MapContainer
@@ -219,7 +228,7 @@ export function JobMap({
           maxClusterRadius={(zoom: number) => (zoom < 8 ? 100 : 40)}
           iconCreateFunction={clusterIcon}
         >
-          {offers.map((offer) => (
+          {mappableOffers.map((offer) => (
             <Marker
               key={offer.id}
               position={[offer.lat, offer.lng]}

@@ -1,16 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router'
-import { toast } from 'sonner'
 import {
   ArrowLeftIcon,
   BuildingIcon,
   CalendarClockIcon,
   CheckIcon,
-  FlagIcon,
   MapPinIcon,
 } from 'lucide-react'
 import { ApplyDialog } from '@/components/applications/ApplyDialog'
 import { ContractBadge } from '@/components/offers/ContractBadge'
+import { ReportOfferDialog } from '@/components/offers/ReportOfferDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -109,14 +108,20 @@ export function OfferDetail({ offer, onBack }: OfferDetailProps) {
               onApplied={() => setApplied(true)}
             />
           ))}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => toast.info('Signalement enregistré côté interface.')}
-        >
-          <FlagIcon />
-          Signaler cette offre
-        </Button>
+
+        {/* Reporting stays open to any signed-in account, seeker or
+            employer — not tied to the applicant-specific block above. */}
+        {user ? (
+          <ReportOfferDialog offerId={offer.id} />
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            render={<Link to="/login" state={{ from: location }} />}
+          >
+            Se connecter pour signaler
+          </Button>
+        )}
       </div>
     </div>
   )
