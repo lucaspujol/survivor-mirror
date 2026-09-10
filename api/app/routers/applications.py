@@ -14,6 +14,7 @@ from sqlalchemy.orm import joinedload, selectinload
 from app import storage
 from app.archival import is_archived
 from app.deps import CurrentEmployer, CurrentSeeker, CurrentUser, DbSession
+from app.routers.dashboard import _experiences_out
 from app.models import Application, ApplicationDocument, Job, JobSeeker
 from app.schemas import (
     ApplicationDocumentOut,
@@ -75,7 +76,7 @@ def _applicant(application: Application, seeker: JobSeeker) -> EmployerApplicant
         phone=application.phone,
         message=application.message,
         skills=list(seeker.skills),
-        experience=seeker.experience,
+        experiences=_experiences_out(seeker),
         availability=seeker.availability,
         documents=_documents_of(application),
         created_at=application.created_at,
@@ -212,6 +213,9 @@ def offer_applicants(
         .options(
             joinedload(Application.job),
             joinedload(Application.job_seeker).joinedload(JobSeeker.user),
+            # Without this the experiences of every candidate are fetched one
+            # query at a time when the list is rendered.
+            joinedload(Application.job_seeker).selectinload(JobSeeker.experiences),
             selectinload(Application.documents),
         )
         .where(Application.job_id == offer_id)
@@ -237,6 +241,9 @@ def update_application_status(
         .options(
             joinedload(Application.job),
             joinedload(Application.job_seeker).joinedload(JobSeeker.user),
+            # Without this the experiences of every candidate are fetched one
+            # query at a time when the list is rendered.
+            joinedload(Application.job_seeker).selectinload(JobSeeker.experiences),
             selectinload(Application.documents),
         )
         .where(Application.id == application_id)

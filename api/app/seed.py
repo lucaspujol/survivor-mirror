@@ -25,7 +25,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal
-from app.models import Application, Employer, Job, JobSeeker, User
+from app.models import (
+    Application,
+    Employer,
+    Job,
+    JobSeeker,
+    SeekerExperience,
+    User,
+)
 from app.security import hash_password
 
 # `.example` is reserved by RFC 2606: the domain cannot be registered and no
@@ -58,15 +65,36 @@ EMPLOYERS: list[tuple[str, str, bool]] = [
 ]
 
 # --- Job seekers -----------------------------------------------------------
-# (email, first name, last name, skills, experience, availability)
-SEEKERS: list[tuple[str, str, str, list[str], str, date]] = [
+# One position held: (job title, contract type, company, start, end, description).
+# `end` is None while the position is still held.
+Experience = tuple[str, str, str, date, date | None, str | None]
+
+# (email, first name, last name, skills, experiences, availability)
+SEEKERS: list[tuple[str, str, str, list[str], list[Experience], date]] = [
     (
         SEEKER_EMAIL,
         "Camille",
         "Fontaine",
         ["Python", "FastAPI", "PostgreSQL", "Git"],
-        "Quatre ans de développement back-end dans une PME de logistique, "
-        "puis une année de reconversion vers les données géographiques.",
+        [
+            (
+                "Développeuse back-end",
+                "cdi",
+                "Logistique Ouest",
+                date(2022, 3, 1),
+                date(2026, 2, 28),
+                "Conception et maintenance des API de suivi de flotte. "
+                "Stack Python, PostgreSQL, et migration vers PostGIS.",
+            ),
+            (
+                "Développeuse junior",
+                "stage",
+                "Agence Kerlann",
+                date(2021, 6, 1),
+                date(2021, 11, 30),
+                "Intégration front et premiers développements d'API REST.",
+            ),
+        ],
         date(2026, 10, 1),
     ),
     (
@@ -74,7 +102,17 @@ SEEKERS: list[tuple[str, str, str, list[str], str, date]] = [
         "Nadia",
         "Belkacem",
         ["Accueil", "Gestion de planning", "Anglais courant"],
-        "Six ans de réception en hôtellerie saisonnière sur la Côte d'Azur.",
+        [
+            (
+                "Réceptionniste",
+                "cdd",
+                "Hôtel des Calanques",
+                date(2020, 4, 1),
+                date(2026, 8, 31),
+                "Accueil d'une clientèle internationale, gestion des "
+                "réservations et clôture de caisse en saison.",
+            ),
+        ],
         date(2026, 9, 15),
     ),
     (
@@ -82,7 +120,25 @@ SEEKERS: list[tuple[str, str, str, list[str], str, date]] = [
         "Yann",
         "Moreau",
         ["Maintenance industrielle", "Soudure", "Habilitation électrique B1V"],
-        "Douze ans de maintenance en fonderie, dont trois comme chef d'équipe.",
+        [
+            (
+                "Chef d'équipe maintenance",
+                "cdi",
+                "Fonderie du Val",
+                date(2023, 1, 9),
+                None,
+                "Encadrement de quatre techniciens, planification des "
+                "interventions préventives.",
+            ),
+            (
+                "Technicien de maintenance",
+                "cdi",
+                "Fonderie du Val",
+                date(2014, 9, 1),
+                date(2022, 12, 31),
+                None,
+            ),
+        ],
         date(2026, 9, 8),
     ),
     (
@@ -90,8 +146,17 @@ SEEKERS: list[tuple[str, str, str, list[str], str, date]] = [
         "Léa",
         "Tavares",
         ["Vente", "Conseil client", "Caisse"],
-        "Deux ans en librairie indépendante, en alternance avec une licence "
-        "de lettres modernes.",
+        [
+            (
+                "Libraire",
+                "alternance",
+                "Librairie Pages & Marges",
+                date(2024, 9, 2),
+                date(2026, 6, 30),
+                "Conseil en rayon jeunesse, réception des commandes, "
+                "en alternance avec une licence de lettres modernes.",
+            ),
+        ],
         date(2026, 11, 3),
     ),
 ]
@@ -273,7 +338,7 @@ def _seed_employers(session: Session) -> dict[str, Employer]:
 
 def _seed_seekers(session: Session) -> dict[str, JobSeeker]:
     seekers: dict[str, JobSeeker] = {}
-    for email, first_name, last_name, skills, experience, availability in SEEKERS:
+    for email, first_name, last_name, skills, experiences, availability in SEEKERS:
         user = _get_or_create_user(session, email, "seeker")
         seeker = session.get(JobSeeker, user.id)
         if seeker is None:
@@ -282,8 +347,19 @@ def _seed_seekers(session: Session) -> dict[str, JobSeeker]:
                 first_name=first_name,
                 last_name=last_name,
                 skills=skills,
-                experience=experience,
                 availability=availability,
+                experiences=[
+                    SeekerExperience(
+                        position=position,
+                        contract_type=contract_type,
+                        company=company,
+                        start_date=start_date,
+                        end_date=end_date,
+                        description=description,
+                    )
+                    for position, contract_type, company, start_date, end_date, description
+                    in experiences
+                ],
             )
             session.add(seeker)
             session.flush()
