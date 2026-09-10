@@ -95,7 +95,7 @@ export function AdminUsersPage() {
   const [sort, setSort] = useState<SortKey>('date_desc')
   const [page, setPage] = useState(1)
 
-  // Any filter or sort change makes the current page number meaningless —
+  // Any filter or sort change makes the current page number meaningless -
   // back to page 1 rather than showing an empty page 4 of a filtered list of 2.
   useEffect(() => {
     setPage(1)
@@ -234,7 +234,7 @@ export function AdminUsersPage() {
                             <td className="px-3 py-2 text-muted-foreground">{user.email}</td>
                             <td className="px-3 py-2 text-muted-foreground">
                               {user.activity_verified === null
-                                ? '—'
+                                ? '-'
                                 : user.activity_verified
                                   ? 'Vérifiée'
                                   : 'À vérifier'}

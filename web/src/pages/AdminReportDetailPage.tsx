@@ -219,7 +219,7 @@ export function AdminReportDetailPage() {
                 >
                   {offerResource.data.company}
                 </Link>
-                {' '}— {offerResource.data.employer_email}
+                {' '}- {offerResource.data.employer_email}
               </p>
               <p className="text-sm text-muted-foreground">
                 {offerResource.data.address ?? offerResource.data.city}

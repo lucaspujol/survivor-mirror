@@ -55,7 +55,7 @@ export function ApplicationsPage() {
                     </CardHeader>
                     <CardContent className="text-sm text-muted-foreground">
                       <p>
-                        {application.company} — {application.city}
+                        {application.company} - {application.city}
                       </p>
                       <p className="mt-1">
                         Envoyée le {formatDate(application.created_at)}

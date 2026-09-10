@@ -151,7 +151,7 @@ export function MapWorkspace() {
   )
 
   // Titles and companies already loaded, as the basis for keyword search
-  // suggestions — no separate network call needed.
+  // suggestions - no separate network call needed.
   const keywordSuggestions = useMemo(
     () => Array.from(new Set(sourceOffers.flatMap((offer) => [offer.title, offer.company]))),
     [sourceOffers],
@@ -182,7 +182,7 @@ export function MapWorkspace() {
 
   // Geocodes the "zone géographique" field and flies the map there. The
   // resulting `moveend` refetches offers for that viewport through the
-  // existing bounds mechanism — no separate client-side text filter needed.
+  // existing bounds mechanism - no separate client-side text filter needed.
   const handleSearch = useCallback(async () => {
     setFilters((current) => ({ ...current, query: draft.query }))
 
@@ -288,7 +288,7 @@ export function MapWorkspace() {
           <div id="offer-list" tabIndex={-1} className="outline-none">
             {selected ? (
               // `key` forces a fresh OfferDetail (and everything inside it,
-              // including ReportOfferDialog) whenever the offer changes —
+              // including ReportOfferDialog) whenever the offer changes -
               // without it, local state like "already reported" leaks from
               // one offer to the next since React just updates props on the
               // same instance instead of remounting it.

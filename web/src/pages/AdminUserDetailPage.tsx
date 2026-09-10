@@ -91,7 +91,7 @@ export function AdminUserDetailPage() {
   const { status, data, error } = useApiResource<UserDetail>(`/api/admin/utilisateurs/${userId}`)
 
   // Mirrored locally so a freshly sent warning shows up immediately, without
-  // a full refetch — same pattern used for offers elsewhere in the app.
+  // a full refetch - same pattern used for offers elsewhere in the app.
   const [warnings, setWarnings] = useState<UserWarning[]>([])
   useEffect(() => {
     if (status === 'ready') setWarnings(data.warnings)
@@ -332,7 +332,7 @@ export function AdminUserDetailPage() {
                               <div>
                                 <p className="font-medium text-primary">{application.job_title}</p>
                                 <p className="text-sm text-muted-foreground">
-                                  {application.company} — {application.city}
+                                  {application.company} - {application.city}
                                 </p>
                               </div>
                               <div className="text-right text-sm text-muted-foreground">

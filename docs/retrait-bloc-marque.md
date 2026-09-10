@@ -1,4 +1,4 @@
-# Retrait du bloc-marque de l'État — inventaire et preuve
+# Retrait du bloc-marque de l'État - inventaire et preuve
 
 Consigne du cabinet, 7 septembre 2026. Aucun visuel de l'État ne subsiste dans
 les interfaces. Les fichiers sont **conservés** dans `_archive/charte-etat/`,
@@ -7,10 +7,10 @@ hors de `web/public/`, donc plus servis par l'application.
 ## Identité retenue (les trois lignes demandées)
 
 1. **Nom** : « GéoEmploi » en typographie seule, sans bloc-marque, sans Marianne,
-   sans mention « Ministère » — c'est le nom déjà porté par l'interface (titre
+   sans mention « Ministère » - c'est le nom déjà porté par l'interface (titre
    d'onglet, page de connexion), donc aucun écran ne change de nom.
 2. **Typographie** : Geist Variable, déjà présente dans les dépendances
-   (`@fontsource-variable/geist`) et déjà déclarée en police de repli — le
+   (`@fontsource-variable/geist`) et déjà déclarée en police de repli - le
    passage est donc sans nouvelle dépendance et sans risque de fonte manquante.
 3. **Couleur primaire** : violet `#863BFF` (`oklch(0.568 0.264 293.4)`), reprise
    du favicon neutre déjà au dépôt ; volontairement éloignée du bleu
@@ -23,7 +23,7 @@ hors de `web/public/`, donc plus servis par l'application.
 | En-tête de la barre latérale | `logo-de-la-republique-francaise.png` + « Ministère du Job et du Bonheur » + « Liberté / Égalité / Fraternité » | Mot-symbole typographique « GéoEmploi » + « Démonstrateur technique » |
 | Barre latérale repliée | Drapeau tricolore | Lettre « C » en typographie |
 | Favicon | `favicon.jpg` (Marianne tricolore) | `favicon.png` |
-| Titre d'onglet | « GéoEmploi » | « GéoEmploi — démonstrateur technique » |
+| Titre d'onglet | « GéoEmploi » | « GéoEmploi - démonstrateur technique » |
 | Typographie globale | Marianne (5 `@font-face`, `--font-heading`, `--font-sans`) | Geist Variable |
 | Couleur primaire | `#1B3A6B` (`--primary`, `--ring`, `--sidebar-primary`, `--chart-1..5`, `--color-institutional`) | `#863BFF` (`--color-brand`) |
 | Marqueur de carte | `job-marker.svg` en `#1B3A6B` | `#863BFF` |
@@ -38,13 +38,13 @@ hors de `web/public/`, donc plus servis par l'application.
 
 « Démonstrateur technique, ne constitue pas un service public en exploitation. »
 
-Portée par `web/src/components/layout/DemoNotice.tsx`, montée dans les **deux**
+Portée par `web/src/components/layout/Footer.tsx`, montée dans les **deux**
 gabarits, donc présente sur la totalité des pages :
 
-- `AppLayout` — carte publique, écrans connectés, écrans vides, **404**
+- `AppLayout` - carte publique, écrans connectés, écrans vides, **404**
   (`/introuvable` et toute URL inconnue) ;
-- `AuthLayout` — connexion et inscription ;
-- `index.html` — `<meta name="description">`, `og:description`,
+- `AuthLayout` - connexion et inscription ;
+- `index.html` - `<meta name="description">`, `og:description`,
   `twitter:description`, donc aussi dans l'aperçu de partage.
 
 La constante `DEMO_NOTICE` est exportée et réutilisée : le libellé n'existe
@@ -73,7 +73,7 @@ un fichier (`Content-Type: text/html`).
 
 ## Reste à faire
 
-**Captures « après » des cinq écrans les plus visibles** — non fournies. Le
+**Captures « après » des cinq écrans les plus visibles** - non fournies. Le
 poste ne dispose pas d'accès navigateur automatisé dans cette session, donc
 aucune capture n'a pu être produite. Les cinq écrans à photographier sont :
 carte publique `/`, connexion `/login`, inscription `/register`, « Mes offres »

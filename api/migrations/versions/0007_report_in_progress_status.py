@@ -26,7 +26,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     # Any row already set to 'in_progress' would violate the narrower
-    # constraint below — move it back to 'pending' first.
+    # constraint below - move it back to 'pending' first.
     op.execute("UPDATE reports SET status = 'pending' WHERE status = 'in_progress'")
     op.drop_constraint("ck_reports_status", "reports", type_="check")
     op.create_check_constraint(

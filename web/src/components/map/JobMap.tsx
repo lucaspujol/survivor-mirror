@@ -66,7 +66,7 @@ function FocusOffer({ offer }: { offer: Offer | null }) {
       return
     }
 
-    // Remote offers have no position — nothing to fly to, and Leaflet
+    // Remote offers have no position - nothing to fly to, and Leaflet
     // throws on flyTo(null, null) if this isn't guarded.
     if (offer.lat == null || offer.lng == null) return
 
@@ -81,7 +81,7 @@ function FocusOffer({ offer }: { offer: Offer | null }) {
 
 /**
  * Centres the map on a geocoded search location (the "zone géographique"
- * field), independently of offer selection — reusing the same fly-to
+ * field), independently of offer selection - reusing the same fly-to
  * mechanism as FocusOffer.
  */
 function FocusLocation({ location }: { location: { lat: number; lng: number } | null }) {
@@ -211,7 +211,7 @@ export function JobMap({
         <ZoomControl position="topright" />
 
         <TileLayer
-          attribution='&copy; <a href="https://www.ign.fr/">IGN</a> — Géoplateforme'
+          attribution='&copy; <a href="https://www.ign.fr/">IGN</a> - Géoplateforme'
           url="https://data.geopf.fr/wmts?SERVICE=WMTS&VERSION=1.0.0&REQUEST=GetTile&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png"
           maxZoom={19}
         />
@@ -248,7 +248,7 @@ export function JobMap({
                   markerElements.current.set(offer.id, element)
                   element.setAttribute(
                     'aria-label',
-                    `Offre : ${offer.title} — ${offer.company}, ${offer.city}. Appuyez sur Entrée pour l'ouvrir.`,
+                    `Offre : ${offer.title} - ${offer.company}, ${offer.city}. Appuyez sur Entrée pour l'ouvrir.`,
                   )
                   element.addEventListener('keydown', (event: KeyboardEvent) => {
                     if (event.key !== ' ' && event.key !== 'Spacebar') return

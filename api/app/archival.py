@@ -3,7 +3,7 @@
 Brief §2.2: an offer is archived 30 days after publication. Archiving is a
 read-time rule rather than a stored flag: the cutoff is computed whenever an
 offer is looked at, so no state can go stale between two runs of a background
-job, and an employer keeps seeing their own offers — labelled as archived —
+job, and an employer keeps seeing their own offers - labelled as archived -
 instead of watching them disappear.
 
 Lives in its own module so both the API surface and the application routes can

@@ -42,7 +42,7 @@ const statusLabels: Record<ReportGroup['status'], string> = {
   dismissed: 'Classé sans suite',
 }
 
-// Worst-to-best, matching the backend's aggregation order — used both to
+// Worst-to-best, matching the backend's aggregation order - used both to
 // color the badge and to support "trier par statut".
 const statusOrder: ReportGroup['status'][] = ['pending', 'in_progress', 'reviewed', 'dismissed']
 

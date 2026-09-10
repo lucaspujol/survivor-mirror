@@ -1,4 +1,4 @@
-# GéoEmploi — demo stack, self-contained.
+# GéoEmploi - demo stack, self-contained.
 #
 # This file ships inside the `geoemploi-demo-build` artifact and runs the
 # prototype from the build output alone: no repository clone, no local

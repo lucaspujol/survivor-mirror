@@ -1,4 +1,4 @@
-# Fonctionnalités reportées — comment les réimplémenter
+# Fonctionnalités reportées - comment les réimplémenter
 
 Quatre exigences prioritaires du cahier des charges ont été implémentées puis
 **retirées** de la branche à la demande du cabinet (gel du 7 septembre 2026).
@@ -29,7 +29,7 @@ une seconde fois.
 
 ## 1. Candidatures (cahier des charges §2.1, §2.2)
 
-**Migration** — aucune. La table `applications` existe déjà depuis
+**Migration** - aucune. La table `applications` existe déjà depuis
 `0001_initial_schema` (contrainte `uq_applications_job_seeker` incluse).
 
 **Fichier à recréer** : `api/app/routers/applications.py`, monté dans
@@ -70,7 +70,7 @@ Le cahier des charges demande une notification à chaque nouvelle candidature et
 **exclut l'e-mail**. C'est donc une simple ligne en base que le destinataire lit
 depuis son écran.
 
-**Migration** : table `notifications` — `id`, `user_id` (FK users, CASCADE),
+**Migration** : table `notifications` - `id`, `user_id` (FK users, CASCADE),
 `type`, `title`, `body`, `job_id` (FK jobs, **`ON DELETE SET NULL`**), `read_at`,
 `created_at`, index `(user_id, created_at)`, CHECK sur `type`.
 
@@ -92,7 +92,7 @@ titre dans `lib/navigation.ts`.
 
 ## 3. Signalement d'offres (§5)
 
-**Migration** : table `reports` — `id`, `job_id` (FK jobs CASCADE),
+**Migration** : table `reports` - `id`, `job_id` (FK jobs CASCADE),
 `reporter_id` (FK users CASCADE), `reason`, `details` (texte libre, max 2000),
 `status`, `created_at`, `updated_at`, `UNIQUE(job_id, reporter_id)`,
 index sur `status`.
@@ -104,7 +104,7 @@ modération.
 `GET /api/admin/signalements` (file de modération, `pending` en premier),
 `PATCH /api/admin/signalements/{id}` (`reviewed` / `dismissed`).
 
-Supprimer l'offre litigieuse reste un appel séparé — `DELETE /api/offres/{id}`,
+Supprimer l'offre litigieuse reste un appel séparé - `DELETE /api/offres/{id}`,
 qu'un admin peut déjà passer sur n'importe quelle offre via
 `require_owner_or_admin`.
 

@@ -4,8 +4,8 @@
 #
 #   ./scripts/smoke-demo-stack.sh [base-url]     # default http://localhost:8080
 #
-# Used by both CI jobs — the one that builds the bundle and the one that
-# downloads the published artifact — so the two verify exactly the same thing.
+# Used by both CI jobs - the one that builds the bundle and the one that
+# downloads the published artifact - so the two verify exactly the same thing.
 
 set -euo pipefail
 
@@ -14,7 +14,7 @@ password='geoemploi2026!'
 domain='demo.geoemploi.example'
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
-ok() { echo "  ok — $*"; }
+ok() { echo "  ok - $*"; }
 
 echo "==> API health ($base)"
 curl -sf "$base/api/health" | grep -q '"status":"ok"' || fail "/api/health did not answer ok"
