@@ -5,14 +5,20 @@ returns rows belonging to the caller, so the three demo accounts see three
 different, non-empty screens.
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import joinedload
 
 from app.archival import is_archived
 from app.deps import CurrentAdmin, CurrentEmployer, CurrentSeeker, DbSession
 from app.models import Application, Employer, Job, JobSeeker, User
-from app.schemas import AdminUserOut, EmployerOfferOut, SeekerApplicationOut
+from app.schemas import (
+    AdminUserOut,
+    EmployerOfferOut,
+    SeekerApplicationOut,
+    SeekerProfileIn,
+    SeekerProfileOut,
+)
 
 router = APIRouter(prefix="/api", tags=["dashboard"])
 
@@ -40,6 +46,70 @@ def my_applications(user: CurrentSeeker, db: DbSession) -> list[SeekerApplicatio
         )
         for application in applications
     ]
+
+
+def _profile_out(seeker: JobSeeker) -> SeekerProfileOut:
+    return SeekerProfileOut(
+        first_name=seeker.first_name,
+        last_name=seeker.last_name,
+        skills=list(seeker.skills),
+        experience=seeker.experience,
+        availability=seeker.availability,
+    )
+
+
+def _get_own_profile(user: User, db: DbSession) -> JobSeeker:
+    seeker = db.get(JobSeeker, user.id)
+    if seeker is None:
+        # The profile row is created with the account, so its absence is a
+        # broken account rather than a bad request.
+        raise HTTPException(
+            status.HTTP_500_INTERNAL_SERVER_ERROR, "Job seeker profile is missing"
+        )
+    return seeker
+
+
+@router.get("/profil", response_model=SeekerProfileOut)
+def my_profile(user: CurrentSeeker, db: DbSession) -> SeekerProfileOut:
+    """The signed-in job seeker's professional profile."""
+    return _profile_out(_get_own_profile(user, db))
+
+
+@router.put("/profil", response_model=SeekerProfileOut)
+def update_my_profile(
+    payload: SeekerProfileIn, user: CurrentSeeker, db: DbSession
+) -> SeekerProfileOut:
+    """Replace the signed-in job seeker's profile.
+
+    Brief §2.1 asks for the *management* of a professional profile, not just
+    its creation: skills, experience and availability are what an employer
+    reads next to an application, and until now only the seed could write
+    them.
+
+    PUT rather than PATCH: the form submits the whole profile, so emptying a
+    field has to mean emptying it.
+    """
+    seeker = _get_own_profile(user, db)
+
+    seeker.first_name = payload.first_name.strip()
+    seeker.last_name = payload.last_name.strip()
+    # Blank entries and duplicates come from the way the form is filled in,
+    # not from anything the job seeker meant to declare. Order is kept: it is
+    # the order they chose to present themselves in.
+    seen: set[str] = set()
+    skills: list[str] = []
+    for raw in payload.skills:
+        skill = raw.strip()
+        if skill and skill.lower() not in seen:
+            seen.add(skill.lower())
+            skills.append(skill)
+    seeker.skills = skills
+    seeker.experience = (payload.experience or "").strip() or None
+    seeker.availability = payload.availability
+
+    db.commit()
+    db.refresh(seeker)
+    return _profile_out(seeker)
 
 
 @router.get("/mes-offres", response_model=list[EmployerOfferOut])

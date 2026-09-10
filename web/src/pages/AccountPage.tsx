@@ -1,5 +1,6 @@
 import { DangerZoneCard } from '@/components/account/DangerZoneCard'
 import { PrivacyCard } from '@/components/account/PrivacyCard'
+import { ProfessionalProfileCard } from '@/components/account/ProfessionalProfileCard'
 import { ProfileCard } from '@/components/account/ProfileCard'
 import { PageShell } from '@/components/layout/PageShell'
 import { Button } from '@/components/ui/button'
@@ -25,6 +26,9 @@ export function AccountPage() {
     >
       <div className="flex flex-col gap-4">
         <ProfileCard user={user} />
+        {/* Only job seekers have a professional profile: it is what employers
+            read next to an application. */}
+        {user.role === 'seeker' && <ProfessionalProfileCard />}
         <PrivacyCard />
         <DangerZoneCard user={user} />
       </div>

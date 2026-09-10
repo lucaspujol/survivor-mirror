@@ -24,6 +24,7 @@ type AuthContextValue = {
   register: (payload: RegisterPayload) => Promise<void>
   logout: () => Promise<void>
   deleteAccount: () => Promise<void>
+  refreshUser: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -64,6 +65,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null)
   }, [])
 
+  /** Re-read the account from the API. Editing a profile changes the name the
+   * sidebar and the account screen display, and those read `display_name`
+   * loaded at boot. */
+  const refreshUser = useCallback(async () => {
+    setUser(await api<User>('/api/auth/me'))
+  }, [])
+
   /** Delete the account for good. The API clears the cookie, so this only has
    * to drop the user the app is rendering. */
   const deleteAccount = useCallback(async () => {
@@ -72,8 +80,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const value = useMemo(
-    () => ({ user, isLoading, login, register, logout, deleteAccount }),
-    [user, isLoading, login, register, logout, deleteAccount],
+    () => ({ user, isLoading, login, register, logout, deleteAccount, refreshUser }),
+    [user, isLoading, login, register, logout, deleteAccount, refreshUser],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
