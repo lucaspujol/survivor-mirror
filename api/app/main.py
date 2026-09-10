@@ -948,3 +948,29 @@ def list_offer_applications_admin(
         )
         for a in applications
     ]
+
+class UserWarningOut(BaseModel):
+    id: int
+    reason: str
+    created_at: datetime
+
+
+@app.get("/api/mes-avertissements", response_model=list[UserWarningOut])
+def list_my_warnings(
+    current_user: CurrentUser,
+    session: Session = Depends(get_session),
+) -> list[UserWarningOut]:
+    warnings = session.execute(
+        select(Warning)
+        .where(Warning.user_id == current_user.id)
+        .order_by(Warning.created_at.desc())
+    ).scalars().all()
+
+    return [
+        UserWarningOut(
+            id=warning.id,
+            reason=warning.reason,
+            created_at=warning.created_at,
+        )
+        for warning in warnings
+    ]
