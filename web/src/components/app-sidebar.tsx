@@ -10,7 +10,14 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { useAuth, type Role } from '@/lib/auth'
-import { BriefcaseIcon, FileTextIcon, FlagIcon, MapIcon, UsersIcon } from 'lucide-react'
+import {
+  AlertTriangleIcon,
+  BriefcaseIcon,
+  FileTextIcon,
+  FlagIcon,
+  MapIcon,
+  UsersIcon,
+} from 'lucide-react'
 
 const mapItem: NavItem = { title: 'Carte', url: '/', icon: <MapIcon /> }
 
@@ -64,7 +71,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavMain
           label="Navigation"
-          items={[mapItem, ...(user ? roleItems[user.role] : [])]}
+          items={[
+            mapItem,
+            ...(user ? roleItems[user.role] : []),
+            ...(user && user.warning_count > 0
+              ? [
+                  {
+                    title: 'Mes avertissements',
+                    url: '/avertissements',
+                    icon: <AlertTriangleIcon />,
+                  },
+                ]
+              : []),
+          ]}
         />
         {user?.role === 'admin' && <NavMain label="Administration" items={adminItems} />}
       </SidebarContent>

@@ -18,6 +18,7 @@ import { LegalNoticePage } from '@/pages/LegalNoticePage'
 import { MyOffersPage } from '@/pages/MyOffersPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { RegisterPage } from '@/pages/RegisterPage'
+import WarningsPage from '@/pages/WarningsPage'
 
 function App() {
   return (
@@ -49,6 +50,8 @@ function App() {
         <Route element={<RequireRole roles={['employer']} />}>
           <Route path="mes-offres" element={<MyOffersPage />} />
         </Route>
+
+        <Route path="/avertissements" element={<WarningsPage />} />
 
         <Route element={<RequireRole roles={['admin']} />}>
           <Route path="admin/utilisateurs" element={<AdminUsersPage />} />

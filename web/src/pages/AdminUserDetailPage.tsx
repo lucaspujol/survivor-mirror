@@ -29,6 +29,7 @@ type UserJob = {
   city: string
   work_mode: string
   application_count: number
+  report_count: number
   created_at: string
 }
 
@@ -302,6 +303,10 @@ export function AdminUserDetailPage() {
                                 <p>
                                   {job.application_count} candidature
                                   {job.application_count > 1 ? 's' : ''}
+                                </p>
+                                <p>
+                                  {job.report_count} signalement
+                                  {job.report_count > 1 ? 's' : ''}
                                 </p>
                                 <p>{dateFormat.format(new Date(job.created_at))}</p>
                               </div>

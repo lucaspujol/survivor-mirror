@@ -9,6 +9,7 @@ export type User = {
   role: Role
   /** Full name of a seeker, company name of an employer. */
   display_name: string
+  warning_count: number
   created_at: string
 }
 

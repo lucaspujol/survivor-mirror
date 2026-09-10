@@ -42,6 +42,7 @@ class UserOut(BaseModel):
     # Full name of a job seeker, company name of an employer: the profile
     # tables hold the names, the users table only authenticates.
     display_name: str
+    warning_count: int
     created_at: datetime
 
 

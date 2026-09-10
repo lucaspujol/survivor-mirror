@@ -1,10 +1,10 @@
 from fastapi import APIRouter, HTTPException, Response, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app import storage
 from app.config import COOKIE_NAME, get_settings
 from app.deps import CurrentUser, DbSession
-from app.models import Application, Employer, Job, JobSeeker, User
+from app.models import Application, Employer, Job, JobSeeker, User, Warning
 from app.schemas import EmployerRegisterIn, LoginIn, RegisterIn, UserOut
 from app.security import create_access_token, hash_password, verify_password
 
@@ -24,7 +24,7 @@ def _set_auth_cookie(response: Response, user_id: int) -> None:
     )
 
 
-def _to_user_out(user: User) -> UserOut:
+def _to_user_out(user: User, db: DbSession) -> UserOut:
     if user.job_seeker is not None:
         display_name = f"{user.job_seeker.first_name} {user.job_seeker.last_name}"
     elif user.employer is not None:
@@ -32,11 +32,17 @@ def _to_user_out(user: User) -> UserOut:
     else:
         # Admins are created straight in the database, with no profile row.
         display_name = user.email
+
+    warning_count = db.scalar(
+        select(func.count(Warning.id)).where(Warning.user_id == user.id)
+    ) or 0
+
     return UserOut(
         id=user.id,
         email=user.email,
         role=user.role,
         display_name=display_name,
+        warning_count=warning_count,
         created_at=user.created_at,
     )
 
@@ -64,7 +70,7 @@ def register(payload: RegisterIn, response: Response, db: DbSession) -> UserOut:
     db.refresh(user)
 
     _set_auth_cookie(response, user.id)
-    return _to_user_out(user)
+    return _to_user_out(user, db)
 
 
 @router.post("/login", response_model=UserOut)
@@ -75,7 +81,7 @@ def login(payload: LoginIn, response: Response, db: DbSession) -> UserOut:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid email or password")
 
     _set_auth_cookie(response, user.id)
-    return _to_user_out(user)
+    return _to_user_out(user, db)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
@@ -84,8 +90,8 @@ def logout(response: Response) -> None:
 
 
 @router.get("/me", response_model=UserOut)
-def me(user: CurrentUser) -> UserOut:
-    return _to_user_out(user)
+def me(user: CurrentUser, db: DbSession) -> UserOut:
+    return _to_user_out(user, db)
 
 
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
