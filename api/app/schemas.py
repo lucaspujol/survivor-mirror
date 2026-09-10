@@ -128,6 +128,8 @@ class EmployerOfferOut(BaseModel):
     address: str | None
     location_status: str
     application_count: int
+    # How many times the offer's detail panel was opened.
+    view_count: int
     # Past its 30-day lifetime: off the map, and no longer open to applications.
     archived: bool
     created_at: datetime

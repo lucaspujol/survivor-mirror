@@ -8,7 +8,7 @@ from geoalchemy2.shape import from_shape, to_shape
 from pydantic import BaseModel, model_validator
 from pyproj import Transformer
 from shapely.geometry import Point
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 from app.archival import archival_cutoff
@@ -358,6 +358,30 @@ def get_offer_public(offer_id: int, session: Session = Depends(get_session)) -> 
     if job is None:
         raise HTTPException(status_code=404, detail=f"Offre {offer_id} introuvable.")
     return job_to_offer(job)
+
+@app.post("/api/offres/{offer_id}/vue", status_code=204)
+def record_offer_view(
+    offer_id: int, session: Session = Depends(get_session)
+) -> None:
+    """Count one view of an offer.
+
+    Open to visitors: consulting the map needs no account (brief §2.2), so the
+    view of someone signed out counts like any other. The update is issued as
+    a single SQL increment rather than a read-modify-write, so two people
+    opening the same offer at once cannot lose a count.
+
+    Nothing about the viewer is recorded, and an archived offer still counts:
+    it can no longer be applied to, but it is still being read.
+    """
+    result = session.execute(
+        update(Job)
+        .where(Job.id == offer_id)
+        .values(view_count=Job.view_count + 1)
+    )
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail=f"Offre {offer_id} introuvable.")
+    session.commit()
+
 
 @app.patch("/api/offres/{offer_id}", response_model=JobOffer)
 def update_offer(

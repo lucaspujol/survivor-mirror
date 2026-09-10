@@ -71,6 +71,7 @@ def my_offers(user: CurrentEmployer, db: DbSession) -> list[EmployerOfferOut]:
             address=job.location_address,
             location_status=job.location_status,
             application_count=application_count,
+            view_count=job.view_count,
             archived=is_archived(job),
             created_at=job.created_at,
         )

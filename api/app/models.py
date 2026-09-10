@@ -276,6 +276,13 @@ class Job(Base):
     location_status: Mapped[str] = mapped_column(
         location_status_enum, nullable=False, server_default=text("'pending'")
     )
+    # Brief §2.1: the employer dashboard reports how many times an offer was
+    # viewed. A plain counter, not a log of who looked: nothing about the
+    # visitor is recorded, which keeps the data minimisation stated at the top
+    # of this module intact.
+    view_count: Mapped[int] = mapped_column(
+        BigInteger, nullable=False, server_default=text("0")
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

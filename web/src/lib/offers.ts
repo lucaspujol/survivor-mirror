@@ -43,6 +43,13 @@ export function getOffer(id: number): Promise<Offer> {
   return api<Offer>(`/api/offres/${id}`)
 }
 
+/** Count one view of an offer. Fire-and-forget: a failed count must never
+ * disturb the reader, so the caller does not wait for it and errors are
+ * swallowed. */
+export function recordOfferView(offerId: number): void {
+  void api<void>(`/api/offres/${offerId}/vue`, { method: 'POST' }).catch(() => undefined)
+}
+
 export function daysSince(iso: string): number {
   const elapsed = Date.now() - new Date(iso).getTime()
   return Math.floor(elapsed / 86_400_000)
