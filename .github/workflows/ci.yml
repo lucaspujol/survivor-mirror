@@ -233,10 +233,19 @@ jobs:
 
       - name: Dump logs on failure
         if: failure()
-        working-directory: downloaded/geoemploi-demo-build
-        run: docker compose logs
+        run: |
+          if [ -f "$BUNDLE/compose.yaml" ]; then
+            docker compose --project-directory "$BUNDLE" -f "$BUNDLE/compose.yaml" logs
+          else
+            echo "Demo bundle was not created; no compose logs available."
+            find build -maxdepth 3 -type f 2>/dev/null | sort || true
+          fi
 
       - name: Tear down
         if: always()
-        working-directory: downloaded/geoemploi-demo-build
-        run: docker compose down -v
+        run: |
+          if [ -f "$BUNDLE/compose.yaml" ]; then
+            docker compose --project-directory "$BUNDLE" -f "$BUNDLE/compose.yaml" down -v
+          else
+            echo "No demo compose file to tear down."
+          fi

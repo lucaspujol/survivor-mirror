@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import {
   ArrowLeftIcon,
-  BuildingIcon,
   CalendarClockIcon,
   CheckIcon,
   MapPinIcon,
