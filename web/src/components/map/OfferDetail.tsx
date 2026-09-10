@@ -110,7 +110,7 @@ export function OfferDetail({ offer, onBack }: OfferDetailProps) {
           ))}
 
         {/* Reporting stays open to any signed-in account, seeker or
-            employer — not tied to the applicant-specific block above. */}
+            employer - not tied to the applicant-specific block above. */}
         {user ? (
           <ReportOfferDialog offerId={offer.id} />
         ) : (

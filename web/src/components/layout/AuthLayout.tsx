@@ -1,5 +1,5 @@
 import { Link, Outlet } from 'react-router'
-import { DEMO_NOTICE } from '@/components/layout/DemoNotice'
+import { Footer } from './Footer'
 import { Button } from '@/components/ui/button'
 import { ArrowLeftIcon } from 'lucide-react'
 
@@ -16,9 +16,9 @@ export function AuthLayout() {
         <Outlet />
       </div>
       <div className="mt-8 w-full max-w-sm md:max-w-3xl">
-        <p className="text-center text-xs text-muted-foreground">
-          {DEMO_NOTICE}
-        </p>
+      </div>
+      <div className="w-full">
+        <Footer />
       </div>
     </div>
   )

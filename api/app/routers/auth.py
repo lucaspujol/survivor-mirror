@@ -95,7 +95,7 @@ def delete_account(user: CurrentUser, db: DbSession, response: Response) -> None
     Brief §3.3: personal data must not outlive the active use of the account,
     and deleting it has to be possible. Every foreign key down from `users`
     cascades, so removing the row takes the profile, the offers, the
-    applications and the document rows with it — but the database says nothing
+    applications and the document rows with it - but the database says nothing
     about the disk, so the uploaded files are collected first and removed once
     the delete commits.
     """

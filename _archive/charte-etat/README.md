@@ -1,4 +1,4 @@
-# Charte graphique de l'État — mise de côté
+# Charte graphique de l'État - mise de côté
 
 Retiré des interfaces le 7 septembre 2026 sur consigne du cabinet : apposer le
 bloc-marque de l'État revient à donner un engagement institutionnel que le

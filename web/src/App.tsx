@@ -9,9 +9,12 @@ import { AdminReportsPage } from '@/pages/AdminReportsPage'
 import { AdminUserDetailPage } from '@/pages/AdminUserDetailPage'
 import { AdminUsersPage } from '@/pages/AdminUsersPage'
 import { ApplicationsPage } from '@/pages/ApplicationsPage'
+import { CGUPage } from '@/pages/CGUPage'
 import { CompanyPage } from '@/pages/CompanyPage'
+import { ConfidentialityPage } from '@/pages/ConfidentialityPage'
 import { HomePage } from '@/pages/HomePage'
 import { LoginPage } from '@/pages/LoginPage'
+import { LegalNoticePage } from '@/pages/LegalNoticePage'
 import { MyOffersPage } from '@/pages/MyOffersPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { RegisterPage } from '@/pages/RegisterPage'
@@ -27,6 +30,11 @@ function App() {
       <Route element={<AppLayout />}>
         <Route index element={<HomePage />} />
         <Route path="entreprises/:employerId" element={<CompanyPage />} />
+
+        {/* Public, reachable from the footer regardless of auth state. */}
+        <Route path="cgu" element={<CGUPage />} />
+        <Route path="mentions-legales" element={<LegalNoticePage />} />
+        <Route path="confidentialite" element={<ConfidentialityPage />} />
 
         <Route element={<RequireAuth />}>
           <Route path="me" element={<AccountPage />} />

@@ -20,7 +20,7 @@ type SearchHelpDialogProps = {
 }
 
 /**
- * The "?" next to a search field. The advice is what makes the field usable —
+ * The "?" next to a search field. The advice is what makes the field usable -
  * which is why it sits one click away rather than in a hover tooltip: a
  * dialog is reachable by keyboard and readable on touch.
  */

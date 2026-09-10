@@ -44,7 +44,7 @@ cp "$repo_root/deploy/demo/compose.yaml" "$out_dir/compose.yaml"
 cp "$repo_root/deploy/demo/DEMO.md" "$out_dir/DEMO.md"
 
 cat > "$out_dir/BUILD-INFO.txt" <<INFO
-GéoEmploi — demo build
+GéoEmploi - demo build
 ======================
 
 Commit      : ${GITHUB_SHA:-$(git -C "$repo_root" rev-parse HEAD)}

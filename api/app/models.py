@@ -49,12 +49,12 @@ CONTRACT_TYPES = ("cdi", "cdd", "stage", "alternance", "interim", "freelance")
 # constraint already allows (it only constrains the 'geocoded' status).
 WORK_MODES = ("on_site", "hybrid", "remote")
 # Independent from WORK_MODES: a job can be full-time remote, part-time
-# on-site, etc. — the two dimensions don't overlap.
+# on-site, etc. - the two dimensions don't overlap.
 TIME_COMMITMENTS = ("full_time", "part_time")
 # Files a candidate attaches to an application. The CV is required, the cover
 # letter optional; one document of each kind per application at most.
 DOCUMENT_KINDS = ("cv", "cover_letter")
-# A report is tied to one (job, reporter) pair — the unique constraint on the
+# A report is tied to one (job, reporter) pair - the unique constraint on the
 # table is what actually prevents a second report from the same account, this
 # tuple only lists the accepted reasons.
 REPORT_REASONS = ("fraudulent", "non_compliant", "expired", "other")
@@ -249,7 +249,7 @@ class Job(Base):
     contract_type: Mapped[str] = mapped_column(
         contract_type_enum, nullable=False, server_default=text("'cdi'")
     )
-    # Free text, e.g. "3 mois" — relevant for cdd/stage/alternance/interim,
+    # Free text, e.g. "3 mois" - relevant for cdd/stage/alternance/interim,
     # left null for cdi/freelance.
     contract_duration: Mapped[str | None] = mapped_column(Text)
     # "on_site" / "hybrid" / "remote". A fully remote offer has no location
@@ -258,7 +258,7 @@ class Job(Base):
     work_mode: Mapped[str] = mapped_column(
         work_mode_enum, nullable=False, server_default=text("'on_site'")
     )
-    # "full_time" / "part_time" — independent from work_mode: a job can be
+    # "full_time" / "part_time" - independent from work_mode: a job can be
     # both full-time and remote, or part-time and on-site.
     time_commitment: Mapped[str] = mapped_column(
         time_commitment_enum, nullable=False, server_default=text("'full_time'")
@@ -385,7 +385,7 @@ class ApplicationDocument(Base):
 class Report(Base):
     """A signed-in user's report against an offer (fraudulent, non-compliant...).
 
-    One report per (job, reporter) pair — the unique constraint below is what
+    One report per (job, reporter) pair - the unique constraint below is what
     actually prevents a second report from the same account, not client-side
     validation, which could always be bypassed by calling the API directly.
     """
@@ -402,7 +402,7 @@ class Report(Base):
     job_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False
     )
-    # Any signed-in account (seeker or employer) may report — not restricted
+    # Any signed-in account (seeker or employer) may report - not restricted
     # to a single role, unlike Application/JobSeeker.
     reporter_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False

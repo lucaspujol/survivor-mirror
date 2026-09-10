@@ -53,8 +53,8 @@ handles, already filled in with a profile, offers or applications.
 The administrator can only come from the seed: `/api/auth/register` refuses the
 `admin` role on purpose (see [`api/app/schemas.py`](api/app/schemas.py)).
 
-Each role opens a different screen — *Mes candidatures* for a job seeker,
-*Mes offres* for an employer, *Utilisateurs* for an administrator — and the
+Each role opens a different screen - *Mes candidatures* for a job seeker,
+*Mes offres* for an employer, *Utilisateurs* for an administrator - and the
 navigation only shows what the signed-in role can actually open. The API
 enforces the same rule: 401 signed out, 403 with the wrong role. Publishing an
 offer requires an employer session, and the offer is attached to that employer.
@@ -69,8 +69,8 @@ artifact.
 > `@demo.geoemploi.example` domain is reserved by RFC 2606 and can never
 > receive mail, and the seeded companies, people and offers are all invented.
 
-The seed is idempotent — running it again creates no duplicate and deletes
-nothing — so it can be replayed at any time:
+The seed is idempotent - running it again creates no duplicate and deletes
+nothing - so it can be replayed at any time:
 
 ```sh
 docker compose exec api python -m app.seed

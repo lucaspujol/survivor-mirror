@@ -86,7 +86,7 @@ export function ApplicationDetailDialog({ application }: ApplicationDetailDialog
         <DialogHeader>
           <DialogTitle>{application.job_title}</DialogTitle>
           <DialogDescription>
-            {application.company} — {application.city}
+            {application.company} - {application.city}
           </DialogDescription>
         </DialogHeader>
 
