@@ -45,6 +45,35 @@ class UserOut(BaseModel):
     created_at: datetime
 
 
+class SeekerProfileOut(BaseModel):
+    """The job seeker's own professional profile, as their account screen
+    shows it back to them."""
+
+    first_name: str
+    last_name: str
+    skills: list[str]
+    experience: str | None
+    availability: date | None
+
+
+class SeekerProfileIn(BaseModel):
+    """What a job seeker may change about their own profile.
+
+    Every field is required: the form always submits the whole profile, so a
+    cleared skill list or an erased availability is a deliberate edit rather
+    than an omission to be ignored.
+    """
+
+    first_name: str = Field(min_length=1, max_length=100)
+    last_name: str = Field(min_length=1, max_length=100)
+    # Capped so a single profile cannot grow unbounded; empty entries and
+    # duplicates are dropped by the route rather than rejected, since they say
+    # nothing the job seeker meant.
+    skills: list[str] = Field(default_factory=list, max_length=30)
+    experience: str | None = Field(default=None, max_length=5000)
+    availability: date | None = None
+
+
 class ApplicationDocumentOut(BaseModel):
     """A file attached to an application, without its content: the bytes are
     served by the dedicated download endpoint."""
@@ -128,6 +157,8 @@ class EmployerOfferOut(BaseModel):
     address: str | None
     location_status: str
     application_count: int
+    # How many times the offer's detail panel was opened.
+    view_count: int
     # Past its 30-day lifetime: off the map, and no longer open to applications.
     archived: bool
     created_at: datetime

@@ -16,7 +16,7 @@ import { Separator } from '@/components/ui/separator'
 import { api } from '@/lib/api'
 import type { Application } from '@/lib/applications'
 import { useAuth } from '@/lib/auth'
-import { daysLeft, publishedLabel, type Offer } from '@/lib/offers'
+import { daysLeft, publishedLabel, recordOfferView, type Offer } from '@/lib/offers'
 
 type OfferDetailProps = {
   offer: Offer
@@ -27,6 +27,13 @@ export function OfferDetail({ offer, onBack }: OfferDetailProps) {
   const { user } = useAuth()
   const location = useLocation()
   const remaining = daysLeft(offer)
+
+  // Opening the panel is what counts as a view. MapWorkspace remounts this
+  // component on every selection (it keys it by offer id), so the effect fires
+  // once per offer opened rather than once per render.
+  useEffect(() => {
+    recordOfferView(offer.id)
+  }, [offer.id])
 
   // Whether this seeker already applied. The API refuses a second application
   // anyway, but a button that is going to fail is worse than the plain

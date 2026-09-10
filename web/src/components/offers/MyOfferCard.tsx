@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 import {
   CalendarClockIcon,
   ClockIcon,
+  EyeIcon,
   LaptopIcon,
   MapPinIcon,
   UsersIcon,
@@ -68,6 +69,10 @@ export function MyOfferCard({ offer, onSaved, onDeleted }: MyOfferCardProps) {
               {LOCATION_STATUS_LABELS[offer.location_status]}
             </Badge>
           )}
+          <Badge variant="outline">
+            <EyeIcon />
+            {offer.view_count} vue{offer.view_count > 1 ? 's' : ''}
+          </Badge>
           <Badge variant="outline">
             <UsersIcon />
             {offer.application_count} candidature{offer.application_count > 1 ? 's' : ''}
