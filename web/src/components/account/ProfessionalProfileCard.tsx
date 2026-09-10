@@ -9,7 +9,12 @@ import { Input } from '@/components/ui/input'
 import { Spinner } from '@/components/ui/spinner'
 import { ApiError } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
-import { getProfile, saveProfile, type SeekerProfile } from '@/lib/profile'
+import {
+  experienceProblem,
+  getProfile,
+  saveProfile,
+  type SeekerProfile,
+} from '@/lib/profile'
 
 const EMPTY: SeekerProfile = {
   first_name: '',
@@ -58,6 +63,18 @@ export function ProfessionalProfileCard() {
   const submit = async (event: FormEvent) => {
     event.preventDefault()
     if (!profile) return
+
+    // An entry left half-filled would be refused by the API with a message
+    // pointing at a field number rather than at the field itself.
+    const incomplete = profile.experiences
+      .map((experience, index) => ({ index, problem: experienceProblem(experience) }))
+      .find((entry) => entry.problem !== null)
+    if (incomplete) {
+      setSaveError(
+        `Complétez l'expérience ${incomplete.index + 1} avant d'enregistrer : ${incomplete.problem}`,
+      )
+      return
+    }
 
     setSaving(true)
     setSaveError('')

@@ -41,6 +41,19 @@ export function emptyExperience(): SeekerExperience {
   }
 }
 
+/** Why an entry cannot be saved yet, or null when it is complete. Mirrors
+ * SeekerExperienceIn in api/app/schemas.py, so the form catches what the API
+ * would reject anyway. */
+export function experienceProblem(experience: SeekerExperience): string | null {
+  if (!experience.position.trim()) return "L'intitulé du poste est obligatoire."
+  if (!experience.company.trim()) return "L'entreprise est obligatoire."
+  if (!experience.start_date) return 'La date de début est obligatoire.'
+  if (experience.end_date && experience.end_date < experience.start_date) {
+    return 'La date de fin ne peut pas précéder la date de début.'
+  }
+  return null
+}
+
 /** "mars 2022 — aujourd'hui", the way a CV reads. */
 export function formatPeriod(experience: SeekerExperience): string {
   const month = (iso: string) =>
